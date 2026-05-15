@@ -1983,7 +1983,7 @@ function selEnergy(el){
   el.classList.add('active');
 }
 // ── ENERGY STATE ──────────────────────────────────────────
-const checkinState = {
+let checkinState = {
   morning:   { level: -1, factors: new Set(), saved: false },
   afternoon: { level: -1, factors: new Set(), saved: false },
   evening:   { level: -1, factors: new Set(), saved: false },
