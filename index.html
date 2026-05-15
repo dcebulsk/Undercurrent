@@ -2611,7 +2611,7 @@ function _doCloudSave() {
   const raw = {
     goals, habits, tasks, quotes,
     energyFactors, checkinState,
-    habitCompletions, vacationMode,
+    habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
     dailyTaskIds:  [...dailyTaskIds],
@@ -2649,7 +2649,7 @@ function _loadFromCloud(uid) {
         energyFactors    = d.energyFactors    ?? energyFactors;
         checkinState     = d.checkinState     ?? checkinState;
         habitCompletions = d.habitCompletions ?? {};
-        vacationMode     = d.vacationMode     ?? false;
+        vacation     = d.vacation     ?? false;
         nextGoalId       = d.nextGoalId       ?? 1;
         nextHabitId      = d.nextHabitId      ?? 1;
         nextTaskId       = d.nextTaskId       ?? 1;
