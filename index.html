@@ -1492,7 +1492,7 @@ function prepTaskModal(id) {
   buildGoalDropdown('task-goal-link', t ? t.goal : '');
   document.getElementById('task-delete-btn').style.display = t ? 'block' : 'none';
   const today = new Date();
-  const due = t ? new Date(today.getTime() + t.daysUntilDue*86400000) : today;
+  const due = t ? new Date(today.getTime() + (t.daysUntilDue??0)*86400000) : today;
   document.getElementById('task-due-input').value = due.toISOString().split('T')[0];
   document.querySelectorAll('#modal-add-task .opt-btn').forEach(b=>{
     if (['High','Medium','Low'].includes(b.textContent)) {
@@ -2035,7 +2035,7 @@ function renderFactors(containerId, slot) {
   const state = checkinState[slot];
   const locked = state && state.saved;
   el.innerHTML = energyFactors.map(f => {
-    const isActive = state && Array.isArray(state.factors) ? state.factors.includes(f) : state && state.factors.has && state.factors.has(f);
+    const isActive = state && (state.factors||[]).includes(f);
     return `<div class="factor-chip${isActive ? ' active' : ''}"
       ${locked ? '' : `onclick="toggleFactor('${slot}','${f}')"`}
       style="${locked ? 'cursor:default;opacity:0.7' : ''}">${f}</div>`;
@@ -2492,7 +2492,7 @@ function _renderHabitPicker() {
   emptyMsg.style.display = 'none';
 
   habits.forEach(h => {
-    const isSelected = _goalSelectedLinks.includes(h.name);
+    const isSelected = h.name && _goalSelectedLinks.includes(h.name);
     const chip = document.createElement('div');
     chip.style.cssText = `display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:16px;cursor:pointer;font-size:0.75rem;font-family:'Share Tech Mono',monospace;transition:all 0.15s;border:1px solid;`;
     if (isSelected) {
@@ -2508,7 +2508,7 @@ function _renderHabitPicker() {
     }
     chip.onclick = () => {
       if (_goalSelectedLinks.includes(h.name)) {
-        _goalSelectedLinks = _goalSelectedLinks.filter(x => x !== h.name);
+        _goalSelectedLinks = _goalSelectedLinks.filter(x => x !== (h.name||""));
       } else {
         _goalSelectedLinks.push(h.name);
       }
@@ -2660,6 +2660,18 @@ function _loadFromCloud(uid) {
         nextHabitId      = d.nextHabitId      ?? 1;
         nextTaskId       = d.nextTaskId       ?? 1;
         pinnedTaskIds    = new Set(d.pinnedTaskIds ?? []);
+        // Normalize habit fields that may be missing on older records
+        habits = habits.map(h => ({
+          ...h,
+          days:          Array.isArray(h.days)          ? h.days          : [],
+          streakData:    Array.isArray(h.streakData)    ? h.streakData    : [],
+          completionLog: (h.completionLog && typeof h.completionLog === 'object') ? h.completionLog : {},
+          links:         Array.isArray(h.links)         ? h.links         : [],
+        }));
+        goals = goals.map(g => ({
+          ...g,
+          links: Array.isArray(g.links) ? g.links : [],
+        }));
         dailyTaskIds     = new Set(d.dailyTaskIds  ?? []);
         dailyTaskDate    = d.dailyTaskDate    ?? '';
         _rebuildAll();
@@ -2679,6 +2691,11 @@ function _loadFromCloud(uid) {
 }
 
 function _rebuildAll() {
+  // Ensure all arrays are valid after cloud load
+  goals   = Array.isArray(goals)   ? goals   : [];
+  habits  = Array.isArray(habits)  ? habits  : [];
+  tasks   = Array.isArray(tasks)   ? tasks   : [];
+  quotes  = Array.isArray(quotes)  ? quotes  : [];
   renderGoals(); renderHabits(); recalcStreaks();
   renderTasks(); renderDailyTasks(); buildCalendar();
   renderFactors('factors-morning',   'morning');
