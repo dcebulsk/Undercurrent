@@ -686,9 +686,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       </div>
     </div>
 
-  </div><!-- end content -->
-  </div><!-- end body-wrap -->
-
     <!-- REVIEW -->
     <div class="page" id="page-review">
       <div class="card card-accent">
@@ -696,6 +693,9 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <div id="review-content"></div>
       </div>
     </div>
+
+  </div><!-- end content -->
+  </div><!-- end body-wrap -->
 
   <div class="bnav">
     <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Goals</div></div>
@@ -2972,60 +2972,86 @@ function buildReview() {
 
   const today = new Date(); today.setHours(0,0,0,0);
 
-  // Calculate stats for current week and last week
   function weekStats(weeksAgo) {
-    const end = new Date(today);
-    end.setDate(end.getDate() - weeksAgo * 7);
-    const start = new Date(end);
-    start.setDate(start.getDate() - 6);
-
-    let habitDone = 0, habitSched = 0, tasksDone = 0;
-    for (let i = 0; i <= 6; i++) {
-      const d = new Date(start); d.setDate(start.getDate() + i);
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (weeksAgo * 7) - i);
       const dow = (d.getDay() + 6) % 7;
       const key = d.toISOString().split('T')[0];
-      const isToday = d.toDateString() === today.toDateString();
+      const isToday = weeksAgo === 0 && i === 0;
+      let done = 0, sched = 0;
       habits.forEach(h => {
         if (!(h.days||[]).includes(dow)) return;
-        habitSched++;
-        const done = isToday ? h.done : !!(h.completionLog||{})[key];
-        if (done) habitDone++;
+        sched++;
+        const completed = isToday ? h.done : !!(h.completionLog||{})[key];
+        if (completed) done++;
       });
+      days.push({ key, dow, done, sched, pct: sched > 0 ? done/sched : null });
     }
-    tasks.forEach(t => {
-      if (t.done) tasksDone++;
-    });
-    return { habitDone, habitSched, tasksDone,
-             pct: habitSched > 0 ? Math.round(habitDone/habitSched*100) : 0 };
+    const totalDone  = days.reduce((a,d) => a + d.done, 0);
+    const totalSched = days.reduce((a,d) => a + d.sched, 0);
+    return { days, totalDone, totalSched,
+             pct: totalSched > 0 ? Math.round(totalDone/totalSched*100) : 0 };
   }
 
   const thisWeek = weekStats(0);
   const lastWeek = weekStats(1);
   const onPace   = thisWeek.pct >= lastWeek.pct;
   const diff     = thisWeek.pct - lastWeek.pct;
+  const DAY_LBLS = ['M','T','W','T','F','S','S'];
+
+  const dayBars = (stats) => stats.days.map((d,i) => {
+    const pct = d.pct !== null ? Math.round(d.pct * 100) : null;
+    const col = pct === null ? 'var(--surf3)' : pct >= 80 ? 'var(--purple2)' : pct >= 50 ? 'var(--purple3)' : 'var(--surf3)';
+    const h = pct !== null ? Math.max(4, Math.round(pct * 0.4)) : 4;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1">
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${pct !== null ? pct+'%' : '—'}</div>
+      <div style="width:100%;height:40px;background:var(--surf3);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden">
+        <div style="width:100%;height:${h}px;background:${col};transition:height 0.3s"></div>
+      </div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${DAY_LBLS[i]}</div>
+    </div>`;
+  }).join('');
 
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px">
-        <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px">THIS WEEK</div>
-        <div style="font-size:1.5rem;font-weight:700;color:var(--purple);font-family:'Rajdhani',sans-serif">${thisWeek.pct}%</div>
-        <div style="font-size:0.6875rem;color:var(--text3)">${thisWeek.habitDone}/${thisWeek.habitSched} habits</div>
+        <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:4px;letter-spacing:1px">THIS WEEK</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--purple);font-family:'Rajdhani',sans-serif;line-height:1">${thisWeek.pct}%</div>
+        <div style="font-size:0.6875rem;color:var(--text3);margin-top:3px">${thisWeek.totalDone}/${thisWeek.totalSched} habits</div>
       </div>
       <div style="padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px">
-        <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px">LAST WEEK</div>
-        <div style="font-size:1.5rem;font-weight:700;color:var(--text2);font-family:'Rajdhani',sans-serif">${lastWeek.pct}%</div>
-        <div style="font-size:0.6875rem;color:var(--text3)">${lastWeek.habitDone}/${lastWeek.habitSched} habits</div>
+        <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:4px;letter-spacing:1px">LAST WEEK</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--text2);font-family:'Rajdhani',sans-serif;line-height:1">${lastWeek.pct}%</div>
+        <div style="font-size:0.6875rem;color:var(--text3);margin-top:3px">${lastWeek.totalDone}/${lastWeek.totalSched} habits</div>
       </div>
     </div>
-    <div style="padding:10px 14px;background:${onPace?'rgba(45,212,191,0.08)':'rgba(240,90,90,0.08)'};border:1px solid ${onPace?'rgba(45,212,191,0.2)':'rgba(240,90,90,0.2)'};border-radius:8px;font-size:0.75rem;color:${onPace?'var(--teal)':'var(--red)'};font-family:'Share Tech Mono',monospace">
+
+    <div style="margin-bottom:14px">
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px;letter-spacing:1px">THIS WEEK · DAY BY DAY</div>
+      <div style="display:flex;gap:4px">${dayBars(thisWeek)}</div>
+    </div>
+
+    <div style="padding:10px 14px;background:${onPace?'rgba(45,212,191,0.08)':'rgba(240,90,90,0.08)'};border:1px solid ${onPace?'rgba(45,212,191,0.2)':'rgba(240,90,90,0.2)'};border-radius:8px;font-size:0.75rem;color:${onPace?'var(--teal)':'var(--red)'};font-family:'Share Tech Mono',monospace;margin-bottom:14px">
       ${onPace
         ? `↑ On pace — ${diff > 0 ? diff+'% ahead of' : 'matching'} last week`
         : `↓ ${Math.abs(diff)}% behind last week's pace — keep going`}
     </div>
-    <div style="margin-top:12px;font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace">
-      Tasks completed all time: <span style="color:var(--purple)">${tasks.filter(t=>t.done).length}</span> &nbsp;·&nbsp;
-      Current XP: <span style="color:var(--purple)">${totalXP}</span> &nbsp;·&nbsp;
-      Overall streak: <span style="color:var(--amber)">${habitCompletions['_overall']||0} days</span>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--amber);font-family:'Rajdhani',sans-serif">${habitCompletions['_overall']||0}</div>
+        <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">day streak</div>
+      </div>
+      <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--purple);font-family:'Rajdhani',sans-serif">${totalXP}</div>
+        <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">total XP</div>
+      </div>
+      <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--teal);font-family:'Rajdhani',sans-serif">${tasks.filter(t=>t.done).length}</div>
+        <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">tasks done</div>
+      </div>
     </div>`;
 }
 
