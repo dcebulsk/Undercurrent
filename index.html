@@ -1063,7 +1063,7 @@ function prepGoalModal(id) {
   document.getElementById('goal-measure-label').value = g ? g.measureLabel : '';
   document.getElementById('goal-measure-current').value = g ? g.measureCurrent : '';
   document.getElementById('goal-measure-target').value = g ? g.measureTarget : '';
-  document.getElementById('goal-links-input') && (document.getElementById('goal-links-input').value = g ? g.links.join(', ') : '');
+  document.getElementById('goal-links-input') && (document.getElementById('goal-links-input').value = g ? (g.links||[]).join(', ') : '');
   buildHabitPicker(g ? g.links : []);
   document.getElementById('goal-delete-btn').style.display = g ? 'block' : 'none';
   document.querySelectorAll('#goal-category-opts .opt-btn').forEach(b => {
@@ -1119,7 +1119,7 @@ function renderGoals() {
     }
     mp = Math.max(mp, 0);
     const xp = Math.min(g.xp/g.xpNext,1);
-    const tagHtml = g.links.map(l=>`<span class="goal-tag gt-h">${l}</span>`).join('');
+    const tagHtml = (g.links||[]).map(l=>`<span class="goal-tag gt-h">${l}</span>`).join('');
     // Direction indicator
     const isDecreasing = g.measureCurrent > g.measureTarget;
     const remaining = isDecreasing
@@ -1140,7 +1140,7 @@ function renderGoals() {
       <div class="bar-bg" style="height:7px;margin-bottom:8px"><div class="bar-fill bt" style="width:${mp*100}%;height:7px"></div></div>
       <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:3px"><span>XP</span><span>${g.xp} / ${g.xpNext}</span></div>
       <div class="bar-bg" style="height:4px;margin-bottom:10px"><div class="bar-fill bp" style="width:${xp*100}%;height:4px"></div></div>
-      ${g.links.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px">${tagHtml}</div>` : ''}
+      ${(g.links||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px">${tagHtml}</div>` : ''}
     </div>`;
   }).join('') + `<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:8px;font-family:'Share Tech Mono',monospace">Tap a goal to edit it</div>`;
 }
@@ -1158,7 +1158,7 @@ function prepHabitModal(id) {
     if (['Easy','Medium','Hard'].includes(b.textContent)) b.classList.toggle('active', b.textContent===(h?h.diff:'Medium'));
   });
   document.querySelectorAll('#habit-days-opts .opt-btn').forEach((b,i)=>{
-    b.classList.toggle('active', h ? h.days.includes(i) : i<5);
+    b.classList.toggle('active', h ? (h.days||[]).includes(i) : i<5);
   });
   updateHabitMissUI();
   updateHabitStreakUI();
@@ -1209,14 +1209,14 @@ function sortHabits(type,el) {
 function getMult(c){return c>=0.9?1.5:c>=0.7?1.25:c>=0.5?1.0:0.75}
 
 function renderHabits() {
-  let list = habits.filter(h=>h.days.includes(selectedDay));
+  let list = habits.filter(h=>(h.days||[]).includes(selectedDay));
   if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
   else if (habitSort==='difficulty') list=[...list].sort((a,b)=>({'Easy':0,'Medium':1,'Hard':2}[b.diff]||0)-({'Easy':0,'Medium':1,'Hard':2}[a.diff]||0));
   else if (habitSort==='consistency') list=[...list].sort((a,b)=>b.consistency-a.consistency);
 
   document.getElementById('habit-list').innerHTML = list.map(h=>{
     const diffCls = {Easy:'bd-easy',Medium:'bd-med',Hard:'bd-hard'}[h.diff];
-    const dots = h.streakData.map(v=>`<div class="sdot" style="background:${v?'var(--purple2)':'var(--surf3)'};${v?'box-shadow:0 0 4px rgba(124,95,230,0.4)':''}"></div>`).join('');
+    const dots = (h.streakData||[]).map(v=>`<div class="sdot" style="background:${v?'var(--purple2)':'var(--surf3)'};${v?'box-shadow:0 0 4px rgba(124,95,230,0.4)':''}"></div>`).join('');
     const rolloverBar = h.miss==='rollover'&&h.rolloverDebt>0?`
       <div style="margin-top:6px">
         <div style="display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:3px"><span>Rollover debt: ${h.rolloverDebt}d</span><span>Need ${h.rolloverDebt+1}× to clear</span></div>
@@ -1427,7 +1427,7 @@ function recalcStreaks() {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dow = (d.getDay() + 6) % 7; // Mon=0
-      if (!h.days.includes(dow)) continue; // not scheduled — skip without breaking streak
+      if (!(h.days||[]).includes(dow)) continue; // not scheduled — skip without breaking streak
       const key = d.toISOString().split('T')[0];
       const done = (i === 0) ? h.done : !!h.completionLog[key];
       if (done) streak++;
@@ -1447,7 +1447,7 @@ function recalcStreaks() {
     d.setDate(d.getDate() - i);
     const dow = (d.getDay() + 6) % 7;
     const key = d.toISOString().split('T')[0];
-    const scheduled = habits.filter(h => h.days.includes(dow));
+    const scheduled = habits.filter(h => (h.days||[]).includes(dow));
     if (!scheduled.length) continue; // no habits that day — skip, don't break
     const allDone = scheduled.every(h => {
       if (i === 0) return h.done;
@@ -1464,7 +1464,7 @@ function recalcStreaks() {
     d.setDate(d.getDate() - i);
     const dow = (d.getDay() + 6) % 7;
     const key = d.toISOString().split('T')[0];
-    const scheduled = habits.filter(h => h.days.includes(dow));
+    const scheduled = habits.filter(h => (h.days||[]).includes(dow));
     scheduled.forEach(h => {
       weekScheduled++;
       const done = (i === 0) ? h.done : !!(h.completionLog && h.completionLog[key]);
@@ -1575,7 +1575,7 @@ function renderTasks() {
 }
 
 function taskRowHTML(t) {
-  const d=t.daysUntilDue;
+  const d=t.daysUntilDue ?? 0;
   let dueTxt,dueCls;
   if(t.done){dueTxt='done ✓';dueCls='due-done';}
   else if(d<0){dueTxt=`${Math.abs(d)}d overdue`;dueCls='due-over';}
@@ -1992,8 +1992,8 @@ let checkinState = {
 function toggleFactor(slot, factor) {
   const s = checkinState[slot];
   if (s.saved) return; // locked after saving
-  if (s.factors.has(factor)) s.factors.delete(factor);
-  else s.factors.add(factor);
+  if (s.factors.includes(factor)) s.factors.splice(s.factors.indexOf(factor), 1);
+  else s.factors.push(factor);
   renderFactors('factors-' + slot, slot);
 }
 
@@ -2035,7 +2035,7 @@ function renderFactors(containerId, slot) {
   const state = checkinState[slot];
   const locked = state && state.saved;
   el.innerHTML = energyFactors.map(f => {
-    const isActive = state && state.factors.has(f);
+    const isActive = state && Array.isArray(state.factors) ? state.factors.includes(f) : state && state.factors.has && state.factors.has(f);
     return `<div class="factor-chip${isActive ? ' active' : ''}"
       ${locked ? '' : `onclick="toggleFactor('${slot}','${f}')"`}
       style="${locked ? 'cursor:default;opacity:0.7' : ''}">${f}</div>`;
@@ -2648,6 +2648,12 @@ function _loadFromCloud(uid) {
         quotes           = d.quotes           ?? [];
         energyFactors    = d.energyFactors    ?? energyFactors;
         checkinState     = d.checkinState     ?? checkinState;
+        // Ensure factors are always plain arrays after Firestore load
+        for (const slot of ['morning','afternoon','evening']) {
+          if (checkinState[slot] && !Array.isArray(checkinState[slot].factors)) {
+            checkinState[slot].factors = [];
+          }
+        }
         habitCompletions = d.habitCompletions ?? {};
         vacation     = d.vacation     ?? false;
         nextGoalId       = d.nextGoalId       ?? 1;
