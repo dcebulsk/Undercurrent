@@ -13,6 +13,16 @@
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<script>
+  // Apply font size and theme immediately to avoid flash
+  (function(){
+    var sizes = {sm:'12px',md:'16px',lg:'20px',xl:'24px'};
+    var sz = localStorage.getItem('uc-textsize') || 'md';
+    document.documentElement.style.fontSize = sizes[sz] || '16px';
+    var theme = localStorage.getItem('uc-theme');
+    if (theme && theme !== 'synthwave') document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 <title>UNDERCURRENT</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -259,6 +269,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2'
   75%{opacity:1;transform:translate(-50%,-50%) scale(1)}
   100%{opacity:0;transform:translate(-50%,-50%) scale(1)}
 }
+/* ── DAILY TASK COMPLETE COUNTDOWN ── */
+.daily-completing{position:relative;overflow:hidden;opacity:0.7;transition:opacity 0.3s}
+.daily-completing::after{content:'';position:absolute;bottom:0;left:0;height:2px;background:var(--teal);animation:dailyCountdown 3s linear forwards}
+@keyframes dailyCountdown{from{width:100%}to{width:0%}}
 /* ── DAILY TASKS ── */
 .daily-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .daily-row:last-child{border-bottom:none}
@@ -269,6 +283,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2'
 .daily-task-text{font-size:0.875rem;color:var(--text);line-height:1.4;flex:1}
 .daily-task-text.done{color:var(--text3);text-decoration:line-through}
 .daily-task-meta{font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:3px}
+.section-chevron{font-size:0.8125rem;color:var(--text3);transition:transform 0.2s;display:inline-block;flex-shrink:0}
 /* ── THEME SWATCHES ── */
 .theme-swatch{border-radius:10px;padding:10px 8px;cursor:pointer;border:2px solid rgba(255,255,255,0.1);transition:all 0.15s;display:flex;align-items:flex-end;min-height:52px}
 .theme-swatch:hover{border-color:rgba(255,255,255,0.4);transform:scale(1.03)}
@@ -411,6 +426,9 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="sidebar-item" id="snav-energy" onclick="showPage('energy',this)">
         <span class="sidebar-icon">⚡</span>Energy
       </div>
+      <div class="sidebar-item" id="snav-review" onclick="showPage('review',this)">
+        <span class="sidebar-icon">📊</span>Review
+      </div>
       <div class="sidebar-bottom">
         <div class="sidebar-flux">
           <div class="sidebar-flux-lbl">// vacation mode</div>
@@ -434,10 +452,16 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         </div>
       </div>
       <div class="card card-accent">
-        <div class="card-title">// life change goals
-          <button class="add-btn" onclick="openModal('add-goal')">+ new goal</button>
+        <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('currents')">// currents
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="add-btn" onclick="event.stopPropagation();openModal('add-goal')">+ new</button>
+            <span class="section-chevron" id="chev-currents">▾</span>
+          </div>
         </div>
-        <div id="goals-list"></div>
+        <div id="section-currents">
+          <div id="goals-list"></div>
+          <div style="font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace;line-height:1.7;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">Currents are larger goals that your habits, tasks and focus time build towards. Completing habits and tasks can help progress your currents.<br>Example: Current = Lose 20 pounds. Habits = Morning Walk 5x a week.</div>
+        </div>
       </div>
     </div>
 
@@ -457,9 +481,13 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
 
       <div class="habits-grid">
         <div class="card card-accent">
-          <div class="card-title">// habits
-            <button class="add-btn" onclick="openModal('add-habit')">+ new</button>
+          <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('habits')">// habits
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="add-btn" onclick="event.stopPropagation();openModal('add-habit')">+ new</button>
+              <span class="section-chevron" id="chev-habits">▾</span>
+            </div>
           </div>
+          <div id="section-habits">
           <div class="day-tabs">
             <div class="dtab active" onclick="selDay(this,0)">Mon</div>
             <div class="dtab" onclick="selDay(this,1)">Tue</div>
@@ -477,25 +505,29 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
             <div class="sort-chip" onclick="sortHabits('consistency',this)">Consistency</div>
           </div>
           <div id="habit-list"></div>
+          </div><!-- /section-habits -->
         </div>
 
         <div class="card">
-          <div class="card-title">// weekly averages</div>
-          <div id="habit-avgs"></div>
+          <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('weekly-avgs')">// weekly averages
+            <span class="section-chevron" id="chev-weekly-avgs" style="margin-left:auto">▾</span>
+          </div>
+          <div id="section-weekly-avgs"><div id="habit-avgs"></div></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title" style="flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="flex-wrap:wrap;gap:8px;cursor:pointer;user-select:none" onclick="toggleSection('calendar')">
           <span id="cal-title">// habit calendar</span>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
             <div class="sort-chip" onclick="calNav(-1)" style="padding:3px 10px;font-size:0.875rem">‹</div>
             <div class="sort-chip active" id="cal-mode-month" onclick="calSetMode('month')">Month</div>
             <div class="sort-chip" id="cal-mode-6mo" onclick="calSetMode('6month')">6 Months</div>
             <div class="sort-chip" onclick="calNav(1)" style="padding:3px 10px;font-size:0.875rem">›</div>
+            <span class="section-chevron" id="chev-calendar">▾</span>
           </div>
         </div>
-        <div style="display:flex;gap:0">
+        <div id="section-calendar" style=""><div style="display:flex;gap:0">
           <div class="cal-day-labels">
             <div class="cal-day-lbl"></div>
             <div class="cal-day-lbl">M</div>
@@ -521,6 +553,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
           <div class="cal-legend-cell" style="background:#c4a8f8"></div>
           <span class="cal-legend-lbl">More</span>
         </div>
+        </div><!-- /section-calendar -->
       </div>
     </div>
 
@@ -529,7 +562,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
 
       <!-- DAILY TASKS (three most important) -->
       <div class="card card-accent" id="daily-card">
-        <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleDailyCollapse()">// today's three
+        <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleDailyCollapse()">// current tasks
           <div style="display:flex;align-items:center;gap:10px">
             <span id="daily-reset-lbl" style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;font-weight:400">resets at midnight</span>
             <span id="daily-chevron" style="font-size:0.8125rem;color:var(--text3);transition:transform 0.2s;display:inline-block">▾</span>
@@ -537,15 +570,19 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         </div>
         <div id="daily-body">
           <div id="daily-list"></div>
-          <div id="daily-empty" style="font-size:0.75rem;color:var(--text3);text-align:center;padding:18px 0;font-family:'Share Tech Mono',monospace;display:none">No tasks selected for today.<br><span style="font-size:0.625rem">Tap ☆ on any task below to add it.</span></div>
+          <div id="daily-empty" style="font-size:0.75rem;color:var(--text3);text-align:center;padding:18px 0;font-family:'Share Tech Mono',monospace;display:none">No current tasks selected.<br><span style="font-size:0.625rem">Tap 📌 on any task below to add it. Max 3.</span></div>
         </div>
       </div>
 
       <!-- ALL TASKS -->
       <div class="card">
-        <div class="card-title">// all tasks
-          <button class="add-btn" onclick="openModal('add-task')">+ new</button>
+        <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('all-tasks')">// all tasks
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="add-btn" onclick="event.stopPropagation();openModal('add-task')">+ new</button>
+            <span class="section-chevron" id="chev-all-tasks">▾</span>
+          </div>
         </div>
+        <div id="section-all-tasks">
         <div class="sort-bar">
           <span class="sort-lbl">Sort:</span>
           <div class="sort-chip active" onclick="sortTasks('priority',this)">Priority</div>
@@ -553,6 +590,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
           <div class="sort-chip" onclick="sortTasks('overdue',this)">Days Overdue</div>
         </div>
         <div id="task-list"></div>
+        </div><!-- /section-all-tasks -->
       </div>
     </div>
 
@@ -560,8 +598,11 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="page" id="page-focus">
       <div class="focus-grid">
         <div class="card card-accent">
-          <div class="card-title">// pomodoro focus
-            <button class="add-btn" onclick="openModal('add-focus')">+ new session</button>
+          <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('pomo-focus')">// pomodoro focus
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="add-btn" onclick="event.stopPropagation();openModal('add-focus')">+ new session</button>
+              <span class="section-chevron" id="chev-pomo-focus">▾</span>
+            </div>
           </div>
           <div class="pom-wrap">
             <div class="pom-ring">
@@ -593,8 +634,10 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
           </div>
         </div>
         <div class="card">
-          <div class="card-title">// session log · today</div>
-          <div id="focus-log">
+          <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('session-log')">// session log · today
+            <span class="section-chevron" id="chev-session-log" style="margin-left:auto">▾</span>
+          </div>
+          <div id="section-session-log"><div id="focus-log">
             <div style="font-size:0.8125rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">No sessions yet today</div>
           </div>
         </div>
@@ -646,12 +689,21 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   </div><!-- end content -->
   </div><!-- end body-wrap -->
 
+    <!-- REVIEW -->
+    <div class="page" id="page-review">
+      <div class="card card-accent">
+        <div class="card-title">// review</div>
+        <div id="review-content"></div>
+      </div>
+    </div>
+
   <div class="bnav">
     <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Goals</div></div>
     <div class="bnav-item" id="bnav-habits" onclick="showPage('habits',this)"><div class="bnav-icon">◎</div><div class="bnav-label">Habits</div></div>
     <div class="bnav-item" id="bnav-tasks" onclick="showPage('tasks',this)"><div class="bnav-icon">◻</div><div class="bnav-label">Tasks</div></div>
     <div class="bnav-item" id="bnav-focus" onclick="showPage('focus',this)"><div class="bnav-icon">◷</div><div class="bnav-label">Focus</div></div>
     <div class="bnav-item" id="bnav-energy" onclick="showPage('energy',this)"><div class="bnav-icon">⚡</div><div class="bnav-label">Energy</div></div>
+    <div class="bnav-item" id="bnav-review" onclick="showPage('review',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Review</div></div>
   </div>
 </div>
 
@@ -667,10 +719,10 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
 <!-- ADD / EDIT GOAL -->
 <div class="modal-overlay" id="modal-add-goal">
   <div class="modal">
-    <div class="modal-title"><span id="goal-modal-title">New Life Goal</span><button class="modal-close" onclick="closeModal('add-goal')">✕</button></div>
+    <div class="modal-title"><span id="goal-modal-title">New Current</span><button class="modal-close" onclick="closeModal('add-goal')">✕</button></div>
     <div class="modal-section">Goal Name</div>
-    <input class="field-input" id="goal-name-input" placeholder="e.g. Find a New Job, Lose Weight…">
-    <div id="goal-name-err" style="display:none;font-size:0.6875rem;color:var(--red);font-family:'Share Tech Mono',monospace;margin-top:4px">⚠ Goal name is required</div>
+    <input class="field-input" id="goal-name-input" placeholder="e.g. Lose 20 pounds, Lose Weight…">
+    <div id="goal-name-err" style="display:none;font-size:0.6875rem;color:var(--red);font-family:'Share Tech Mono',monospace;margin-top:4px">⚠ Name is required</div>
     <div class="modal-section">What are you measuring?</div>
     <input class="field-input" id="goal-measure-label" placeholder="Metric label (e.g. Weight, Applications Sent)" style="margin-bottom:8px">
     <div class="field-row">
@@ -697,8 +749,15 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="opt-btn" onclick="toggleOpt(this,'goal-category')">Relationships</div>
       <div class="opt-btn" onclick="toggleOpt(this,'goal-category')">Personal</div>
     </div>
-    <button class="modal-save" onclick="saveGoal()">Save Goal</button>
-    <button class="modal-delete" id="goal-delete-btn" style="display:none" onclick="deleteItem('goal')">Delete Goal</button>
+    <div class="modal-section">Subgoals (optional)</div>
+    <div style="font-size:0.6875rem;color:var(--text3);margin-bottom:8px">Break this current into smaller milestones. Each contributes to overall progress.</div>
+    <div id="subgoals-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px">
+      <input class="field-input" id="subgoal-input" placeholder="e.g. Lose first 5 pounds" style="flex:1">
+      <button class="opt-btn active" onclick="addSubgoal()" style="white-space:nowrap">+ Add</button>
+    </div>
+    <button class="modal-save" onclick="saveGoal()">Save Current</button>
+    <button class="modal-delete" id="goal-delete-btn" style="display:none" onclick="deleteItem('goal')">Delete Current</button>
   </div>
 </div>
 
@@ -735,7 +794,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="opt-btn active" id="habit-streak-daily" onclick="setHabitStreak('daily')">Daily consecutive</div>
       <div class="opt-btn" id="habit-streak-weekly" onclick="setHabitStreak('weekly')">Weekly average</div>
     </div>
-    <div class="modal-section">Link to Life Goal (optional)</div>
+    <div class="modal-section">Link to Current (optional)</div>
     <select class="field-input" id="habit-goal-link" style="cursor:pointer"></select>
     <button class="modal-save" onclick="saveHabit()">Save Habit</button>
     <button class="modal-delete" id="habit-delete-btn" style="display:none" onclick="deleteItem('habit')">Delete Habit</button>
@@ -757,7 +816,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     </div>
     <div class="modal-section">Due Date</div>
     <input class="field-input" id="task-due-input" type="date">
-    <div class="modal-section">Link to Life Goal (optional)</div>
+    <div class="modal-section">Link to Current (optional)</div>
     <select class="field-input" id="task-goal-link" style="cursor:pointer"></select>
     <button class="modal-save" onclick="saveTask()">Save Task</button>
     <button class="modal-delete" id="task-delete-btn" style="display:none" onclick="deleteItem('task')">Delete Task</button>
@@ -815,7 +874,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="opt-btn" onclick="toggleOpt(this,'focus-diff')">Epic</div>
     </div>
 
-    <div class="modal-section">Link to Life Goal (optional)</div>
+    <div class="modal-section">Link to Current (optional)</div>
     <select class="field-input" id="focus-goal-link" style="cursor:pointer"></select>
     <button class="modal-save" onclick="saveFocus()">Start Session</button>
   </div>
@@ -1026,6 +1085,7 @@ function showPage(id) {
   const sn = document.getElementById('snav-'+id);
   if (sn) sn.classList.add('active');
   document.getElementById('content').scrollTop = 0;
+  if (id === 'review') buildReview();
 }
 
 function toggleVacation() {
@@ -1060,7 +1120,7 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 // ── GOALS ─────────────────────────────────────────────────
 function prepGoalModal(id) {
   const g = id ? goals.find(x=>x.id===id) : null;
-  document.getElementById('goal-modal-title').textContent = g ? 'Edit Goal' : 'New Life Goal';
+  document.getElementById('goal-modal-title').textContent = g ? 'Edit Goal' : 'New Current';
   document.getElementById('goal-name-input').value = g ? g.name : '';
   document.getElementById('goal-measure-label').value = g ? g.measureLabel : '';
   document.getElementById('goal-measure-current').value = g ? g.measureCurrent : '';
@@ -1068,6 +1128,8 @@ function prepGoalModal(id) {
   document.getElementById('goal-links-input') && (document.getElementById('goal-links-input').value = g ? (g.links||[]).join(', ') : '');
   buildHabitPicker(g ? g.links : []);
   document.getElementById('goal-delete-btn').style.display = g ? 'block' : 'none';
+  _editingSubgoals = g ? JSON.parse(JSON.stringify(g.subgoals||[])) : [];
+  _renderSubgoalsList();
   document.querySelectorAll('#goal-category-opts .opt-btn').forEach(b => {
     b.classList.toggle('active', g ? b.textContent === g.category : b.textContent === 'Health');
   });
@@ -1142,9 +1204,21 @@ function renderGoals() {
       <div class="bar-bg" style="height:7px;margin-bottom:8px"><div class="bar-fill bt" style="width:${mp*100}%;height:7px"></div></div>
       <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:3px"><span>XP</span><span>${g.xp} / ${g.xpNext}</span></div>
       <div class="bar-bg" style="height:4px;margin-bottom:10px"><div class="bar-fill bp" style="width:${xp*100}%;height:4px"></div></div>
-      ${(g.links||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px">${tagHtml}</div>` : ''}
+      ${(g.links||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${tagHtml}</div>` : ''}
+      ${(g.subgoals||[]).length ? `
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+          <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px">SUBGOALS · ${(g.subgoals||[]).filter(s=>s.done).length}/${(g.subgoals||[]).length} complete</div>
+          ${(g.subgoals||[]).map(sg=>`
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="width:12px;height:12px;border-radius:3px;flex-shrink:0;background:${sg.done?'var(--purple2)':'var(--surf3)'};border:1px solid ${sg.done?'var(--purple2)':'var(--border2)'}"></div>
+              <div style="flex:1">
+                <div style="font-size:0.75rem;color:${sg.done?'var(--text3)':'var(--text)'};${sg.done?'text-decoration:line-through':''}">${sg.name}</div>
+                <div style="height:3px;background:var(--surf3);border-radius:2px;margin-top:2px;overflow:hidden"><div style="height:100%;width:${sg.done?100:0}%;background:var(--purple2)"></div></div>
+              </div>
+            </div>`).join('')}
+        </div>` : ''}
     </div>`;
-  }).join('') + `<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:8px;font-family:'Share Tech Mono',monospace">Tap a goal to edit it</div>`;
+  }).join('') + `<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:8px;font-family:'Share Tech Mono',monospace">Tap a current to edit it</div>`;
 }
 
 // ── HABITS ────────────────────────────────────────────────
@@ -1599,6 +1673,47 @@ function taskRowHTML(t) {
   </div>`;
 }
 
+// ── COLLAPSIBLE SECTIONS ──────────────────────────────────
+const _sectionIds = {
+  'currents':    'section-currents',
+  'habits':      'section-habits',
+  'weekly-avgs': 'section-weekly-avgs',
+  'calendar':    'section-calendar',
+  'all-tasks':   'section-all-tasks',
+  'pomo-focus':  null,  // wraps pom-wrap, handled below
+  'session-log': 'section-session-log',
+};
+
+function toggleSection(key) {
+  const bodyId = _sectionIds[key];
+  // For pomo-focus, collapse the pom-wrap + end buttons
+  const body = bodyId ? document.getElementById(bodyId)
+    : document.querySelector('.pom-wrap');
+  if (!body) return;
+  const chev = document.getElementById('chev-' + key);
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (chev) chev.style.transform = collapsed ? '' : 'rotate(-90deg)';
+  // Persist
+  const states = JSON.parse(localStorage.getItem('uc-sections') || '{}');
+  states[key] = collapsed ? '0' : '1';
+  localStorage.setItem('uc-sections', JSON.stringify(states));
+}
+
+function loadSectionStates() {
+  const states = JSON.parse(localStorage.getItem('uc-sections') || '{}');
+  for (const [key, val] of Object.entries(states)) {
+    if (val === '1') {
+      const bodyId = _sectionIds[key];
+      const body = bodyId ? document.getElementById(bodyId)
+        : document.querySelector('.pom-wrap');
+      if (body) body.style.display = 'none';
+      const chev = document.getElementById('chev-' + key);
+      if (chev) chev.style.transform = 'rotate(-90deg)';
+    }
+  }
+}
+
 function toggleDailyCollapse() {
   const body = document.getElementById('daily-body');
   const chev = document.getElementById('daily-chevron');
@@ -1632,7 +1747,7 @@ function renderDailyTasks() {
     else if(d===0) {dueTxt='due today';       dueCls='due-today';}
     else if(d===1) {dueTxt='due tomorrow';    dueCls='due-soon';}
     else           {dueTxt=`due in ${d}d`;   dueCls='due-ok';}
-    return `<div class="daily-row">
+    return `<div class="daily-row" data-id="${t.id}">
       <div class="daily-num">${i+1}</div>
       <div class="tcheck ${t.done?'done':''}" onclick="toggleTask(${t.id},this)" style="flex-shrink:0;margin-top:2px"></div>
       <div style="flex:1;min-width:0">
@@ -1641,9 +1756,10 @@ function renderDailyTasks() {
           <span class="task-due ${dueCls}">${dueTxt}</span>
           ${isPinned ? '<span style="color:var(--amber);margin-left:8px">📌 pinned</span>' : ''}
           ${t.goal ? `<span style="color:var(--amber);margin-left:8px">→ ${t.goal}</span>` : ''}
+          ${t.done && _dailyRemoveTimers[t.id] ? `<span style="color:var(--teal);margin-left:8px;cursor:pointer;text-decoration:underline" onclick="cancelAutoRemove(${t.id})">undo</span>` : ''}
         </div>
       </div>
-      <button class="star-btn" onclick="addToDaily(${t.id})" title="Remove from today" style="font-size:1.0rem">✕</button>
+      <button class="star-btn" onclick="addToDaily(${t.id})" title="Remove from current" style="font-size:1.0rem">✕</button>
     </div>`;
   }).join('');
 
@@ -1656,14 +1772,53 @@ function renderDailyTasks() {
     `resets in ${hrs}h ${mins}m`;
 }
 
+const _dailyRemoveTimers = {}; // id -> timeout
+
 function toggleTask(id, sourceEl){
   const t=tasks.find(x=>x.id===id);
   if(!t) return;
   t.done=!t.done;
   const xpAmt = XP_TASK[t.priority] || 20;
-  if (t.done) _addXP(xpAmt, sourceEl);
-  else _removeXP(xpAmt);
+  if (t.done) {
+    _addXP(xpAmt, sourceEl);
+    playHabitTaskSound();
+    // If in current tasks, schedule auto-remove after 3s
+    if (dailyTaskIds.has(id)) {
+      _scheduleAutoRemove(id);
+    }
+  } else {
+    _removeXP(xpAmt);
+    // Uncompleted — cancel any pending removal
+    if (_dailyRemoveTimers[id]) {
+      clearTimeout(_dailyRemoveTimers[id]);
+      delete _dailyRemoveTimers[id];
+    }
+  }
   renderTasks(); renderDailyTasks();
+}
+
+function _scheduleAutoRemove(id) {
+  if (_dailyRemoveTimers[id]) clearTimeout(_dailyRemoveTimers[id]);
+  // Mark the row as completing
+  const row = document.querySelector(`.daily-row[data-id="${id}"]`);
+  if (row) row.classList.add('daily-completing');
+  _dailyRemoveTimers[id] = setTimeout(() => {
+    delete _dailyRemoveTimers[id];
+    dailyTaskIds.delete(id);
+    pinnedTaskIds.delete(id);
+    _saveDailyState();
+    renderTasks(); renderDailyTasks();
+    cloudSave();
+  }, 3000);
+}
+
+function cancelAutoRemove(id) {
+  if (_dailyRemoveTimers[id]) {
+    clearTimeout(_dailyRemoveTimers[id]);
+    delete _dailyRemoveTimers[id];
+    const row = document.querySelector(`.daily-row[data-id="${id}"]`);
+    if (row) row.classList.remove('daily-completing');
+  }
 }
 
 // ── FOCUS ─────────────────────────────────────────────────
@@ -1826,6 +1981,7 @@ function _pomRefreshDisplay() {
 }
 
 function _onFocusComplete() {
+  playPomoSound();
   pomSessionNum++;
   const mins = Math.round(pomFocusSecs / 60);
   pomTotalMins += mins;
@@ -2274,7 +2430,7 @@ function buildGoalDropdown(selectId, selectedValue) {
   });
   // New goal option
   const newOpt = document.createElement('option');
-  newOpt.value = '__new__'; newOpt.textContent = '＋ New Life Goal…';
+  newOpt.value = '__new__'; newOpt.textContent = '＋ New Current…';
   sel.appendChild(newOpt);
   // Handle "New" selection
   sel.onchange = () => {
@@ -2464,6 +2620,7 @@ function _showXPPopup(amount, sourceEl) {
 }
 
 function _showLevelUp(level) {
+  playLevelUpSound();
   const el = document.getElementById('levelup-popup');
   document.getElementById('levelup-num').textContent = level;
   el.classList.remove('show');
@@ -2618,6 +2775,10 @@ function _doCloudSave() {
     pinnedTaskIds: [...pinnedTaskIds],
     dailyTaskIds:  [...dailyTaskIds],
     dailyTaskDate,
+    theme:    localStorage.getItem('uc-theme')    || 'synthwave',
+    textSize: localStorage.getItem('uc-textsize') || 'md',
+    dailyCollapsed: localStorage.getItem('uc-daily-collapsed') || '0',
+    quoteIndex,
   };
   const data = _sanitize(raw);
   data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -2673,6 +2834,7 @@ function _loadFromCloud(uid) {
         goals = goals.map(g => ({
           ...g,
           links: Array.isArray(g.links) ? g.links : [],
+          subgoals: Array.isArray(g.subgoals) ? g.subgoals : [],
         }));
         dailyTaskIds     = new Set(d.dailyTaskIds  ?? []);
         dailyTaskDate    = d.dailyTaskDate    ?? '';
@@ -2739,7 +2901,143 @@ function _patchForSync() {
 
 // ── Auth state listener wired in Firebase block below ─────
 
+// ── SUBGOALS ──────────────────────────────────────────────
+let _editingSubgoals = []; // working copy while modal is open
+
+function _renderSubgoalsList() {
+  const list = document.getElementById('subgoals-list');
+  if (!list) return;
+  list.innerHTML = _editingSubgoals.map((sg, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surf);border:1px solid var(--border);border-radius:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.8125rem;color:var(--text);margin-bottom:4px">${sg.name}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${sg.done?100:0}%;background:var(--purple2);transition:width 0.3s"></div>
+          </div>
+          <input type="checkbox" ${sg.done?'checked':''} onchange="_toggleSubgoal(${i})" style="width:14px;height:14px;cursor:pointer;accent-color:var(--purple2)">
+        </div>
+      </div>
+      <span onclick="_deleteSubgoal(${i})" style="font-size:1.0rem;color:var(--text3);cursor:pointer">×</span>
+    </div>`).join('');
+}
+
+function addSubgoal() {
+  const inp = document.getElementById('subgoal-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  _editingSubgoals.push({ name: val, done: false });
+  inp.value = '';
+  _renderSubgoalsList();
+}
+
+function _toggleSubgoal(idx) {
+  _editingSubgoals[idx].done = !_editingSubgoals[idx].done;
+  _renderSubgoalsList();
+}
+
+function _deleteSubgoal(idx) {
+  _editingSubgoals.splice(idx, 1);
+  _renderSubgoalsList();
+}
+
+// ── SOUNDS ────────────────────────────────────────────────
+const _sounds = {};
+let _soundEnabled = localStorage.getItem('uc-sound') !== '0';
+
+function _loadSound(key, url) {
+  const a = new Audio(url);
+  a.preload = 'auto';
+  _sounds[key] = a;
+}
+
+function _playRandom(keys) {
+  if (!_soundEnabled) return;
+  const key = keys[Math.floor(Math.random() * keys.length)];
+  const snd = _sounds[key];
+  if (snd) {
+    snd.currentTime = 0;
+    snd.play().catch(() => {});
+  }
+}
+
+function playHabitTaskSound() { _playRandom(['chirpy','happy','synthetic']); }
+function playPomoSound()      { _playRandom(['bells_a','bells_b']); }
+function playLevelUpSound()   { _playRandom(['levelup']); }
+
+// ── REVIEW SECTION ────────────────────────────────────────
+function buildReview() {
+  const el = document.getElementById('review-content');
+  if (!el) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Calculate stats for current week and last week
+  function weekStats(weeksAgo) {
+    const end = new Date(today);
+    end.setDate(end.getDate() - weeksAgo * 7);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+
+    let habitDone = 0, habitSched = 0, tasksDone = 0;
+    for (let i = 0; i <= 6; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const dow = (d.getDay() + 6) % 7;
+      const key = d.toISOString().split('T')[0];
+      const isToday = d.toDateString() === today.toDateString();
+      habits.forEach(h => {
+        if (!(h.days||[]).includes(dow)) return;
+        habitSched++;
+        const done = isToday ? h.done : !!(h.completionLog||{})[key];
+        if (done) habitDone++;
+      });
+    }
+    tasks.forEach(t => {
+      if (t.done) tasksDone++;
+    });
+    return { habitDone, habitSched, tasksDone,
+             pct: habitSched > 0 ? Math.round(habitDone/habitSched*100) : 0 };
+  }
+
+  const thisWeek = weekStats(0);
+  const lastWeek = weekStats(1);
+  const onPace   = thisWeek.pct >= lastWeek.pct;
+  const diff     = thisWeek.pct - lastWeek.pct;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px">THIS WEEK</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--purple);font-family:'Rajdhani',sans-serif">${thisWeek.pct}%</div>
+        <div style="font-size:0.6875rem;color:var(--text3)">${thisWeek.habitDone}/${thisWeek.habitSched} habits</div>
+      </div>
+      <div style="padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px">LAST WEEK</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--text2);font-family:'Rajdhani',sans-serif">${lastWeek.pct}%</div>
+        <div style="font-size:0.6875rem;color:var(--text3)">${lastWeek.habitDone}/${lastWeek.habitSched} habits</div>
+      </div>
+    </div>
+    <div style="padding:10px 14px;background:${onPace?'rgba(45,212,191,0.08)':'rgba(240,90,90,0.08)'};border:1px solid ${onPace?'rgba(45,212,191,0.2)':'rgba(240,90,90,0.2)'};border-radius:8px;font-size:0.75rem;color:${onPace?'var(--teal)':'var(--red)'};font-family:'Share Tech Mono',monospace">
+      ${onPace
+        ? `↑ On pace — ${diff > 0 ? diff+'% ahead of' : 'matching'} last week`
+        : `↓ ${Math.abs(diff)}% behind last week's pace — keep going`}
+    </div>
+    <div style="margin-top:12px;font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace">
+      Tasks completed all time: <span style="color:var(--purple)">${tasks.filter(t=>t.done).length}</span> &nbsp;·&nbsp;
+      Current XP: <span style="color:var(--purple)">${totalXP}</span> &nbsp;·&nbsp;
+      Overall streak: <span style="color:var(--amber)">${habitCompletions['_overall']||0} days</span>
+    </div>`;
+}
+
 // ── INIT ──────────────────────────────────────────────────
+// Load sounds
+_loadSound('bells_a',   './snd_bells_a.wav');
+_loadSound('bells_b',   './snd_bells_b.wav');
+_loadSound('chirpy',    './snd_chirpy.wav');
+_loadSound('happy',     './snd_happy.wav');
+_loadSound('synthetic', './snd_synthetic.wav');
+_loadSound('levelup',   './snd_levelup.wav');
+
 renderGoals();
 renderHabits();
 recalcStreaks();
@@ -2756,6 +3054,7 @@ loadTheme();
 loadTextSize();
 _initDailyReset();
 renderDailyTasks();
+loadSectionStates();
 if (localStorage.getItem('uc-daily-collapsed') === '1') {
   document.getElementById('daily-body').style.display = 'none';
   document.getElementById('daily-chevron').style.transform = 'rotate(-90deg)';
