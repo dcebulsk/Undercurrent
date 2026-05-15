@@ -2596,27 +2596,37 @@ function cloudSave() {
   _saveTimer = setTimeout(_doCloudSave, 1500); // debounce 1.5s
 }
 
+function _sanitize(obj) {
+  // Strip undefined, convert Sets — Firestore can't handle either
+  return JSON.parse(JSON.stringify(obj, (k, v) => {
+    if (v instanceof Set) return [...v];
+    if (v === undefined) return null;
+    return v;
+  }));
+}
+
 function _doCloudSave() {
   if (!_currentUser) return;
   _setSyncBar('↑ Saving…', 'rgba(157,127,245,0.15)');
-  const data = {
+  const raw = {
     goals, habits, tasks, quotes,
-    energyFactors, checkinState: _serializeCheckinState(),
+    energyFactors, checkinState,
     habitCompletions, vacationMode,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
     dailyTaskIds:  [...dailyTaskIds],
     dailyTaskDate,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
+  const data = _sanitize(raw);
+  data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   db.collection('users').doc(_currentUser.uid).set(data)
     .then(() => {
       _setSyncBar('✓ Synced', 'rgba(45,212,191,0.12)');
       setTimeout(() => _setSyncBar(null), 2000);
     })
     .catch(err => {
-      _setSyncBar('⚠ Sync failed', 'rgba(240,90,90,0.15)');
-      console.error('Sync error:', err);
+      _setSyncBar('⚠ Save failed: ' + err.code, 'rgba(240,90,90,0.15)');
+      console.error('Save error:', err);
     });
 }
 
@@ -2656,8 +2666,8 @@ function _loadFromCloud(uid) {
       }
     })
     .catch(err => {
-      _setSyncBar('⚠ Load failed — using local data', 'rgba(240,90,90,0.15)');
-      setTimeout(() => _setSyncBar(null), 3000);
+      _setSyncBar('⚠ Load failed: ' + err.code, 'rgba(240,90,90,0.15)');
+      setTimeout(() => _setSyncBar(null), 5000);
       console.error('Load error:', err);
     });
 }
