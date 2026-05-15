@@ -2136,15 +2136,11 @@ function _addSessionToLog(task, goal, mins) {
 }
 
 // ── ENERGY ────────────────────────────────────────────────
-function selEnergy(el){
-  el.closest('.energy-scale').querySelectorAll('.elevel').forEach(e=>e.classList.remove('active'));
-  el.classList.add('active');
-}
 // ── ENERGY STATE ──────────────────────────────────────────
 let checkinState = {
-  morning:   { level: -1, factors: new Set(), saved: false },
-  afternoon: { level: -1, factors: new Set(), saved: false },
-  evening:   { level: -1, factors: new Set(), saved: false },
+  morning:   { level: -1, factors: [], saved: false },
+  afternoon: { level: -1, factors: [], saved: false },
+  evening:   { level: -1, factors: [], saved: false },
 };
 
 function toggleFactor(slot, factor) {
