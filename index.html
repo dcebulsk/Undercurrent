@@ -775,6 +775,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="modal-section">Habit Name</div>
     <input class="field-input" id="habit-name-input" placeholder="e.g. Morning Workout, 10k Steps…">
     <div id="habit-name-err" style="display:none;font-size:0.6875rem;color:var(--red);font-family:'Share Tech Mono',monospace;margin-top:4px">⚠ Habit name is required</div>
+    <div class="modal-section">Label <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
+    <div class="opt-row" id="habit-label-opts" style="flex-wrap:wrap;gap:6px"></div>
     <div class="modal-section">Difficulty</div>
     <div class="opt-row">
       <div class="opt-btn" onclick="toggleOpt(this,'habit-diff')">Easy</div>
@@ -815,6 +817,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="modal-section">Task Name</div>
     <input class="field-input" id="task-name-input" placeholder="e.g. Revamp resume, Schedule gym…">
     <div id="task-name-err" style="display:none;font-size:0.6875rem;color:var(--red);font-family:'Share Tech Mono',monospace;margin-top:4px">⚠ Task name is required</div>
+    <div class="modal-section">Label <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
+    <div class="opt-row" id="task-label-opts" style="flex-wrap:wrap;gap:6px"></div>
     <div class="modal-section">Priority</div>
     <div class="opt-row">
       <div class="opt-btn active" onclick="toggleOpt(this,'task-priority')">High</div>
@@ -2939,7 +2943,7 @@ function _doCloudSave() {
   _setSyncBar('↑ Saving…', 'rgba(157,127,245,0.15)');
   const raw = {
     goals, habits, tasks, quotes,
-    labels,
+    labels, totalXP,
     energyFactors, checkinState,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
@@ -2982,6 +2986,7 @@ function _loadFromCloud(uid) {
         tasks            = d.tasks            ?? [];
         quotes           = d.quotes           ?? [];
         labels           = Array.isArray(d.labels) ? d.labels : labels;
+        if (d.totalXP !== undefined) totalXP = d.totalXP;
         energyFactors    = d.energyFactors    ?? energyFactors;
         checkinState     = d.checkinState     ?? checkinState;
         // Ensure factors are always plain arrays after Firestore load
@@ -3137,6 +3142,7 @@ let _soundEnabled = localStorage.getItem('uc-sound') !== '0';
 function _loadSound(key, url) {
   const a = new Audio(url);
   a.preload = 'auto';
+  a.volume = 1.0;
   _sounds[key] = a;
 }
 
