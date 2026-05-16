@@ -504,6 +504,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
             <div class="sort-chip" onclick="sortHabits('streak',this)">🔥 Streak</div>
             <div class="sort-chip" onclick="sortHabits('difficulty',this)">Difficulty</div>
             <div class="sort-chip" onclick="sortHabits('consistency',this)">Consistency</div>
+            <div id="habit-label-filter-chips"></div>
           </div>
           <div id="habit-list"></div>
           </div><!-- /section-habits -->
@@ -589,6 +590,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
           <div class="sort-chip active" onclick="sortTasks('priority',this)">Priority</div>
           <div class="sort-chip" onclick="sortTasks('due_soonest',this)">Due Soonest</div>
           <div class="sort-chip" onclick="sortTasks('overdue',this)">Days Overdue</div>
+          <div id="task-label-filter-chips"></div>
         </div>
         <div id="task-list"></div>
         </div><!-- /section-all-tasks -->
@@ -917,6 +919,13 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div id="quote-status" style="font-size:0.75rem;font-family:'Share Tech Mono',monospace;min-height:14px;color:var(--teal)"></div>
     </div>
 
+    <div class="modal-section">Labels (shared across habits &amp; tasks)</div>
+    <div id="labels-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px">
+      <input class="field-input" id="label-input" placeholder="e.g. Work, Gamedev, Health…" style="flex:1" onkeydown="if(event.key==='Enter')addLabel()">
+      <button class="opt-btn active" onclick="addLabel()" style="white-space:nowrap">+ Add</button>
+    </div>
+
     <div class="modal-section">Energy Factors</div>
     <div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px">Tap × to remove. These appear in your daily check-ins.</div>
     <div class="factors-grid" id="settings-factors"></div>
@@ -1093,6 +1102,10 @@ function showToast(msg) {
   clearTimeout(t._to);
   t._to = setTimeout(() => t.style.opacity = '0', 2200);
 }
+
+let labels = ['Work','Gamedev','Health','Personal','Finance','Creative'];
+let _habitLabelFilter = 'all';
+let _taskLabelFilter  = 'all';
 
 let energyFactors = ['Exercise','Water','Meds','Good Sleep','Outside','Caffeine','Stress','Alcohol','Social','Creative Work','Late Night','Screen Time'];
 
@@ -1273,6 +1286,7 @@ function prepHabitModal(id) {
   document.querySelectorAll('#habit-days-opts .opt-btn').forEach((b,i)=>{
     b.classList.toggle('active', h ? (h.days||[]).includes(i) : i<5);
   });
+  _renderModalLabelPicker('habit-label-opts', h ? h.label || '' : '');
   updateHabitMissUI();
   updateHabitStreakUI();
 }
@@ -1296,11 +1310,12 @@ function saveHabit() {
   const days = [...document.querySelectorAll('#habit-days-opts .opt-btn')].map((b,i)=>b.classList.contains('active')?i:-1).filter(i=>i>=0);
   const goalVal = document.getElementById('habit-goal-link').value;
   const goal = goalVal === '__new__' ? '' : goalVal;
+  const label = _getModalLabel('habit-label-opts');
   if (editingId !== null) {
     const h = habits.find(x=>x.id===editingId);
-    if (h) Object.assign(h,{name,diff,days,goal,miss:habitMissBehavior,streakType:habitStreakType});
+    if (h) Object.assign(h,{name,diff,days,goal,miss:habitMissBehavior,streakType:habitStreakType,label});
   } else {
-    habits.push({id:nextHabitId++,name,diff,goal,days,streak:0,bestStreak:0,miss:habitMissBehavior,streakType:habitStreakType,consistency:0,done:false,rolloverDebt:0,streakData:[]});
+    habits.push({id:nextHabitId++,name,diff,goal,days,streak:0,bestStreak:0,miss:habitMissBehavior,streakType:habitStreakType,consistency:0,done:false,rolloverDebt:0,streakData:[],label:label||''});
   }
   closeModal('add-habit');
   renderHabits();
@@ -1323,6 +1338,7 @@ function getMult(c){return c>=0.9?1.5:c>=0.7?1.25:c>=0.5?1.0:0.75}
 
 function renderHabits() {
   let list = habits.filter(h=>(h.days||[]).includes(selectedDay));
+  if (_habitLabelFilter !== 'all') list = list.filter(h => h.label === _habitLabelFilter);
   if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
   else if (habitSort==='difficulty') list=[...list].sort((a,b)=>({'Easy':0,'Medium':1,'Hard':2}[b.diff]||0)-({'Easy':0,'Medium':1,'Hard':2}[a.diff]||0));
   else if (habitSort==='consistency') list=[...list].sort((a,b)=>b.consistency-a.consistency);
@@ -1342,6 +1358,7 @@ function renderHabits() {
         <div class="habit-meta">
           <span class="badge ${diffCls}">${h.diff}</span>
           ${h.goal?`<span class="badge bd-goal">→ ${h.goal}</span>`:''}
+          ${h.label?`<span class="badge" style="background:rgba(67,232,249,0.1);border-color:rgba(67,232,249,0.25);color:var(--cyan)">${h.label}</span>`:''}
           <span class="badge ${h.miss==='rollover'?'bd-ro':'bd-rs'}">${h.miss==='rollover'?'↩ rollover':'✕ reset'}</span>
           <span class="mult-badge">${getMult(h.consistency)}×</span>
         </div>
@@ -1613,6 +1630,7 @@ function prepTaskModal(id) {
       b.classList.toggle('active', map[b.textContent]===(t?t.priority:'high'));
     }
   });
+  _renderModalLabelPicker('task-label-opts', t ? t.label || '' : '');
 }
 
 function saveTask() {
@@ -1627,11 +1645,12 @@ function saveTask() {
   const daysUntilDue = Math.round((dueDate-today)/(86400000));
   const goalVal = document.getElementById('task-goal-link').value;
   const goal = goalVal === '__new__' ? '' : goalVal;
+  const label = _getModalLabel('task-label-opts');
   if (editingId !== null) {
     const t = tasks.find(x=>x.id===editingId);
-    if (t) Object.assign(t,{text,priority,daysUntilDue,goal});
+    if (t) Object.assign(t,{text,priority,daysUntilDue,goal,label:label||''});
   } else {
-    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,done:false});
+    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,done:false,label:label||''});
   }
   closeModal('add-task');
   renderTasks(); renderDailyTasks();
@@ -1647,6 +1666,8 @@ function sortTasks(type,el) {
 
 function renderTasks() {
   let sorted = [...tasks];
+  // Apply label filter
+  if (_taskLabelFilter !== 'all') sorted = sorted.filter(t => t.label === _taskLabelFilter);
   // Always separate done/undone first, done always at bottom
   const undone = sorted.filter(t=>!t.done);
   const done   = sorted.filter(t=>t.done);
@@ -1704,6 +1725,7 @@ function taskRowHTML(t) {
     <div class="task-body">
       <div class="task-text${t.done?' done':''}" onclick="openModal('add-task',${t.id})">${t.text}</div>
       ${t.goal?`<div class="task-goal-link">→ ${t.goal}</div>`:''}
+      ${t.label?`<div style="display:inline-block;margin-top:2px;padding:1px 8px;background:rgba(67,232,249,0.1);border:1px solid rgba(67,232,249,0.25);border-radius:10px;font-size:0.625rem;color:var(--cyan);font-family:'Share Tech Mono',monospace">${t.label}</div>`:''}
       <div class="task-due-row"><span class="task-due ${dueCls}">${dueTxt}</span>${overdue}</div>
     </div>
     <button class="star-btn ${inDaily?'starred':''}" onclick="addToDaily(${t.id})" title="${inDaily?'Remove from today':'Add to today'}">📌</button>
@@ -2419,11 +2441,101 @@ function loadTheme() {
   setTheme(saved, null);
 }
 
+// ── LABELS ────────────────────────────────────────────────
+function _renderSettingsLabels() {
+  const el = document.getElementById('labels-list');
+  if (!el) return;
+  el.innerHTML = labels.map(l => `
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 12px;background:var(--surf2);border:1px solid var(--border2);border-radius:16px;font-size:0.75rem;color:var(--text2)">
+      ${l}
+      <span onclick="removeLabel('${l}')" style="font-size:0.875rem;color:var(--text3);cursor:pointer;line-height:1;padding-left:2px" title="Remove">×</span>
+    </div>`).join('');
+}
+
+function addLabel() {
+  const inp = document.getElementById('label-input');
+  const val = inp.value.trim();
+  if (!val || labels.includes(val)) { inp.value=''; return; }
+  labels.push(val);
+  inp.value = '';
+  _renderSettingsLabels();
+  _renderLabelFilterChips();
+  cloudSave();
+}
+
+function removeLabel(name) {
+  labels = labels.filter(l => l !== name);
+  // Remove from any habits/tasks that had it
+  habits.forEach(h => { if (h.label === name) h.label = ''; });
+  tasks.forEach(t => { if (t.label === name) t.label = ''; });
+  _renderSettingsLabels();
+  _renderLabelFilterChips();
+  renderHabits(); renderTasks();
+  cloudSave();
+}
+
+// Render label picker chips in habit/task modal
+function _renderModalLabelPicker(containerId, currentLabel) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const none = `<div class="opt-btn${!currentLabel?'  active':''}"
+    onclick="_selectModalLabel('${containerId}','')" style="font-size:0.75rem">None</div>`;
+  el.innerHTML = none + labels.map(l => `
+    <div class="opt-btn${currentLabel===l?' active':''}"
+      onclick="_selectModalLabel('${containerId}','${l}')"
+      style="font-size:0.75rem">${l}</div>`).join('');
+}
+
+function _selectModalLabel(containerId, val) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  [...el.children].forEach(b => b.classList.remove('active'));
+  const active = [...el.children].find(b => b.textContent.trim() === (val || 'None'));
+  if (active) active.classList.add('active');
+}
+
+function _getModalLabel(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return '';
+  const active = [...el.children].find(b => b.classList.contains('active'));
+  if (!active) return '';
+  const txt = active.textContent.trim();
+  return txt === 'None' ? '' : txt;
+}
+
+// Render filter chips in sort bars
+function _renderLabelFilterChips() {
+  ['habit','task'].forEach(type => {
+    const el = document.getElementById(`${type}-label-filter-chips`);
+    if (!el) return;
+    const currentFilter = type === 'habit' ? _habitLabelFilter : _taskLabelFilter;
+    el.innerHTML = `<div class="sort-chip${currentFilter==='all'?' active':''}"
+        onclick="_setLabelFilter('${type}','all',this)" style="margin-left:4px">All</div>` +
+      labels.map(l => `<div class="sort-chip${currentFilter===l?' active':''}"
+        onclick="_setLabelFilter('${type}','${l}',this)">${l}</div>`).join('');
+  });
+}
+
+function _setLabelFilter(type, label, el) {
+  if (type === 'habit') {
+    _habitLabelFilter = label;
+    // Deactivate other chips in habit sort bar
+    document.querySelectorAll('#habit-label-filter-chips .sort-chip').forEach(c => c.classList.remove('active'));
+  } else {
+    _taskLabelFilter = label;
+    document.querySelectorAll('#task-label-filter-chips .sort-chip').forEach(c => c.classList.remove('active'));
+  }
+  el.classList.add('active');
+  if (type === 'habit') renderHabits();
+  else renderTasks();
+}
+
 // ── SETTINGS ──────────────────────────────────────────────
 function prepSettingsModal() {
   document.getElementById('import-status').textContent = '';
   document.getElementById('quote-status').textContent = '';
   _renderSettingsFactors();
+  _renderSettingsLabels();
   _renderQuotesList();
   // Mark active size button
   const savedSize = localStorage.getItem('uc-textsize') || 'md';
@@ -2823,6 +2935,7 @@ function _doCloudSave() {
   _setSyncBar('↑ Saving…', 'rgba(157,127,245,0.15)');
   const raw = {
     goals, habits, tasks, quotes,
+    labels,
     energyFactors, checkinState,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
@@ -2864,6 +2977,7 @@ function _loadFromCloud(uid) {
         habits           = d.habits           ?? [];
         tasks            = d.tasks            ?? [];
         quotes           = d.quotes           ?? [];
+        labels           = Array.isArray(d.labels) ? d.labels : labels;
         energyFactors    = d.energyFactors    ?? energyFactors;
         checkinState     = d.checkinState     ?? checkinState;
         // Ensure factors are always plain arrays after Firestore load
@@ -2935,6 +3049,7 @@ function _rebuildAll() {
   renderFactors('factors-afternoon', 'afternoon');
   renderFactors('factors-evening',   'evening');
   renderEnergyScales();
+  _renderLabelFilterChips();
   renderTrends(); updateXPBar();
   _lastLevel = _calcLevel(totalXP).level;
   _initDailyReset();
@@ -3144,6 +3259,7 @@ renderFactors('factors-morning', 'morning');
 renderFactors('factors-afternoon', 'afternoon');
 renderFactors('factors-evening', 'evening');
 renderEnergyScales();
+_renderLabelFilterChips();
 renderTrends();
 updateXPBar();
 _lastLevel = _calcLevel(totalXP).level;
