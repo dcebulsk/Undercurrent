@@ -1006,12 +1006,28 @@ function _todayStr() {
 function _initDailyReset() {
   const today = _todayStr();
   if (dailyTaskDate !== today) {
-    // Only reset tasks/pinned — don't touch checkinState here,
-    // Firestore load will handle restoring today's energy or clearing if it's a new day
+    // Reset pinned/daily tasks
     dailyTaskIds = new Set([...pinnedTaskIds]);
     dailyTaskDate = today;
     _saveDailyState();
   }
+}
+
+function _resetHabitsDoneIfNewDay() {
+  // Called after cloud load — reset h.done if the completion log shows
+  // today hasn't been logged yet (i.e. it's a new day since last session)
+  const today = _todayStr();
+  habits.forEach(h => {
+    if (!h.completionLog) h.completionLog = {};
+    // If h.done is true but today isn't in completionLog, it's stale from yesterday
+    if (h.done && !h.completionLog[today]) {
+      h.done = false;
+    }
+    // If today IS in completionLog, ensure h.done reflects it
+    if (h.completionLog[today]) {
+      h.done = true;
+    }
+  });
 }
 
 function _checkEnergyReset(cloudDate) {
@@ -1349,7 +1365,7 @@ function toggleHabit(id, sourceEl) {
   if (!h) return;
   h.done = !h.done;
   if (h.done && h.rolloverDebt>0) h.rolloverDebt=0;
-  const today = new Date().toISOString().split('T')[0];
+  const today = _todayStr();
   // Per-habit completion log
   if (!h.completionLog) h.completionLog = {};
   if (h.done) {
@@ -2912,6 +2928,7 @@ function _rebuildAll() {
   habits  = Array.isArray(habits)  ? habits  : [];
   tasks   = Array.isArray(tasks)   ? tasks   : [];
   quotes  = Array.isArray(quotes)  ? quotes  : [];
+  _resetHabitsDoneIfNewDay();
   renderGoals(); renderHabits(); recalcStreaks();
   renderTasks(); renderDailyTasks(); buildCalendar();
   renderFactors('factors-morning',   'morning');
@@ -3139,7 +3156,13 @@ if (localStorage.getItem('uc-daily-collapsed') === '1') {
   document.getElementById('daily-body').style.display = 'none';
   document.getElementById('daily-chevron').style.transform = 'rotate(-90deg)';
 }
-setInterval(() => { _initDailyReset(); renderDailyTasks(); }, 60000);
+setInterval(() => {
+  _initDailyReset();
+  _resetHabitsDoneIfNewDay();
+  renderHabits();
+  recalcStreaks();
+  renderDailyTasks();
+}, 60000);
 
 // ── SERVICE WORKER ────────────────────────────────────────
 if ('serviceWorker' in navigator) {
