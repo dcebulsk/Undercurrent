@@ -88,12 +88,13 @@
   --amber:#b45309;--teal:#0d7a6e;--cyan:#0369a1;--red:#dc2626;
   --text:#1a1040;--text2:#3d2d80;--text3:#6b5f8a;--dim:#d4d0ff;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow:hidden}
+html{height:100%;height:-webkit-fill-available}
+body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow:hidden;display:flex;flex-direction:column}
 .grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(124,95,230,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,95,230,0.03) 1px,transparent 1px);background-size:32px 32px}
 .scanlines{position:fixed;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.025) 0,rgba(0,0,0,0.025) 1px,transparent 1px,transparent 2px)}
 
 /* ── SHELL: mobile = column, desktop = row ── */
-.shell{display:flex;flex-direction:column;height:100vh;position:relative;z-index:1}
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh;position:relative;z-index:1}
 
 /* ── TOPBAR ── */
 .topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:10}
@@ -123,7 +124,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2'
 .sidebar-flux-val{font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;color:var(--amber);margin-top:2px}
 
 /* ── CONTENT ── */
-.content{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.content{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(120px + env(safe-area-inset-bottom));scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .page{display:none;animation:fadeIn 0.16s ease}
 .page.active{display:flex;flex-direction:column;gap:14px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -324,7 +325,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   .body-wrap{flex-direction:row}
   .sidebar{display:flex}
   .bnav{display:none}
-  .content{padding:20px 24px 24px;padding-bottom:24px}
+  .content{padding:20px 24px;padding-bottom:40px}
   .page.active{gap:16px}
 
   /* modals float centered instead of bottom-sheet */
@@ -998,12 +999,32 @@ let pinnedTaskIds = new Set(JSON.parse(localStorage.getItem('uc-pinned') || '[]'
 let dailyTaskIds  = new Set(JSON.parse(localStorage.getItem('uc-daily')  || '[]'));
 let dailyTaskDate = localStorage.getItem('uc-daily-date') || '';
 
+function _todayStr() {
+  return new Date().toISOString().split('T')[0]; // YYYY-MM-DD, consistent everywhere
+}
+
 function _initDailyReset() {
-  const today = new Date().toLocaleDateString();
+  const today = _todayStr();
   if (dailyTaskDate !== today) {
+    // Only reset tasks/pinned — don't touch checkinState here,
+    // Firestore load will handle restoring today's energy or clearing if it's a new day
     dailyTaskIds = new Set([...pinnedTaskIds]);
     dailyTaskDate = today;
     _saveDailyState();
+  }
+}
+
+function _checkEnergyReset(cloudDate) {
+  // Called after Firestore load with the date stored in cloud data
+  // If the cloud energy is from a different day, reset it
+  const today = _todayStr();
+  if (cloudDate !== today) {
+    checkinState = {
+      morning:   { level: -1, factors: [], saved: false },
+      afternoon: { level: -1, factors: [], saved: false },
+      evening:   { level: -1, factors: [], saved: false },
+    };
+    cloudSave();
   }
 }
 
@@ -2145,10 +2166,11 @@ let checkinState = {
 
 function toggleFactor(slot, factor) {
   const s = checkinState[slot];
-  if (s.saved) return; // locked after saving
+  if (s.saved) return;
   if (s.factors.includes(factor)) s.factors.splice(s.factors.indexOf(factor), 1);
   else s.factors.push(factor);
   renderFactors('factors-' + slot, slot);
+  cloudSave();
 }
 
 function selEnergy(el, slot) {
@@ -2158,12 +2180,12 @@ function selEnergy(el, slot) {
   [...scale.children].forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   s.level = [...scale.children].indexOf(el);
+  cloudSave();
 }
 
 function saveCheckin(slot) {
   const s = checkinState[slot];
   s.saved = true;
-  // Update status label
   const slotEl = document.getElementById('checkin-slot-' + slot);
   if (slotEl) {
     const statusEl = slotEl.querySelector('.checkin-status');
@@ -2172,6 +2194,26 @@ function saveCheckin(slot) {
     if (saveBtn) saveBtn.style.display = 'none';
   }
   renderFactors('factors-' + slot, slot);
+  cloudSave();
+}
+
+function renderEnergyScales() {
+  // Restore emoji level button active state from checkinState
+  ['morning','afternoon','evening'].forEach(slot => {
+    const s = checkinState[slot];
+    const slotEl = document.getElementById('checkin-slot-' + slot);
+    if (!slotEl) return;
+    // Restore level
+    const btns = slotEl.querySelectorAll('.elevel');
+    btns.forEach((b, i) => b.classList.toggle('active', i === s.level));
+    // Restore saved state
+    if (s.saved) {
+      const statusEl = slotEl.querySelector('.checkin-status');
+      if (statusEl) { statusEl.textContent = '✓ logged'; statusEl.style.color = 'var(--teal)'; }
+      const saveBtn = slotEl.querySelector('.checkin-save-btn');
+      if (saveBtn) saveBtn.style.display = 'none';
+    }
+  });
 }
 
 function renderFactors(containerId, slot) {
@@ -2771,6 +2813,7 @@ function _doCloudSave() {
     pinnedTaskIds: [...pinnedTaskIds],
     dailyTaskIds:  [...dailyTaskIds],
     dailyTaskDate,
+    energyDate: _todayStr(),
     theme:    localStorage.getItem('uc-theme')    || 'synthwave',
     textSize: localStorage.getItem('uc-textsize') || 'md',
     dailyCollapsed: localStorage.getItem('uc-daily-collapsed') || '0',
@@ -2834,6 +2877,19 @@ function _loadFromCloud(uid) {
         }));
         dailyTaskIds     = new Set(d.dailyTaskIds  ?? []);
         dailyTaskDate    = d.dailyTaskDate    ?? '';
+        // Restore preferences from cloud
+        if (d.theme)    { localStorage.setItem('uc-theme', d.theme); loadTheme(); }
+        if (d.textSize) { localStorage.setItem('uc-textsize', d.textSize); loadTextSize(); }
+        if (d.quoteIndex !== undefined) quoteIndex = d.quoteIndex;
+        if (d.dailyCollapsed === '1') {
+          localStorage.setItem('uc-daily-collapsed', '1');
+          const body = document.getElementById('daily-body');
+          const chev = document.getElementById('daily-chevron');
+          if (body) body.style.display = 'none';
+          if (chev) chev.style.transform = 'rotate(-90deg)';
+        }
+        // Check if stored energy is from today — reset if it's a new day
+        _checkEnergyReset(d.energyDate || '');
         _rebuildAll();
         _setSyncBar('✓ Data loaded', 'rgba(45,212,191,0.12)');
         setTimeout(() => _setSyncBar(null), 2000);
@@ -2861,6 +2917,7 @@ function _rebuildAll() {
   renderFactors('factors-morning',   'morning');
   renderFactors('factors-afternoon', 'afternoon');
   renderFactors('factors-evening',   'evening');
+  renderEnergyScales();
   renderTrends(); updateXPBar();
   _lastLevel = _calcLevel(totalXP).level;
   _initDailyReset();
@@ -3069,6 +3126,7 @@ recalcStreaks();
 renderFactors('factors-morning', 'morning');
 renderFactors('factors-afternoon', 'afternoon');
 renderFactors('factors-evening', 'evening');
+renderEnergyScales();
 renderTrends();
 updateXPBar();
 _lastLevel = _calcLevel(totalXP).level;
