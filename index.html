@@ -504,7 +504,9 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
             <div class="sort-chip" onclick="sortHabits('streak',this)">🔥 Streak</div>
             <div class="sort-chip" onclick="sortHabits('difficulty',this)">Difficulty</div>
             <div class="sort-chip" onclick="sortHabits('consistency',this)">Consistency</div>
-            <div id="habit-label-filter-chips"></div>
+            <div style="width:1px;background:var(--border);margin:0 2px;align-self:stretch"></div>
+            <span class="sort-lbl">Filter:</span>
+            <div id="habit-label-filter-chips" style="display:contents"></div>
           </div>
           <div id="habit-list"></div>
           </div><!-- /section-habits -->
@@ -590,7 +592,9 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
           <div class="sort-chip active" onclick="sortTasks('priority',this)">Priority</div>
           <div class="sort-chip" onclick="sortTasks('due_soonest',this)">Due Soonest</div>
           <div class="sort-chip" onclick="sortTasks('overdue',this)">Days Overdue</div>
-          <div id="task-label-filter-chips"></div>
+          <div style="width:1px;background:var(--border);margin:0 2px;align-self:stretch"></div>
+          <span class="sort-lbl">Filter:</span>
+          <div id="task-label-filter-chips" style="display:contents"></div>
         </div>
         <div id="task-list"></div>
         </div><!-- /section-all-tasks -->
@@ -2510,7 +2514,7 @@ function _renderLabelFilterChips() {
     if (!el) return;
     const currentFilter = type === 'habit' ? _habitLabelFilter : _taskLabelFilter;
     el.innerHTML = `<div class="sort-chip${currentFilter==='all'?' active':''}"
-        onclick="_setLabelFilter('${type}','all',this)" style="margin-left:4px">All</div>` +
+        onclick="_setLabelFilter('${type}','all',this)">All</div>` +
       labels.map(l => `<div class="sort-chip${currentFilter===l?' active':''}"
         onclick="_setLabelFilter('${type}','${l}',this)">${l}</div>`).join('');
   });
