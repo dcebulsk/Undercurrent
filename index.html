@@ -97,10 +97,10 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .shell{display:flex;flex-direction:column;height:100vh;height:100dvh;position:relative;z-index:1}
 
 /* ── TOPBAR ── */
-.topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:10}
+.topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:10;gap:8px;min-width:0}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple2),var(--pink2),transparent);opacity:0.5}
-.logo{font-family:'Rajdhani',sans-serif;font-size:1.25rem;font-weight:700;letter-spacing:4px;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase}
-.topbar-right{display:flex;align-items:center;gap:8px}
+.logo{font-family:'Rajdhani',sans-serif;font-size:1.25rem;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase;min-width:0;flex-shrink:1}
+.topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .top-btn{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:0.75rem;color:var(--text2);cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all 0.15s}
 .top-btn:hover{border-color:var(--border2);color:var(--text)}
 .top-btn.vacation{background:rgba(45,212,191,0.1);border-color:rgba(45,212,191,0.3);color:var(--teal)}
@@ -656,9 +656,28 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="page" id="page-energy">
       <div class="card card-accent">
         <div class="card-title">// energy check-ins · today
-          <div style="display:flex;align-items:center;gap:8px">
-            <div id="checkin-goal-dots" style="display:flex;gap:4px"></div>
-            <button class="add-btn" onclick="openCheckinModal()">+ Log Check-in</button>
+          <div id="checkin-goal-dots" style="display:flex;gap:4px"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <div onclick="openCheckinModalWithLevel(0)" style="flex:1;padding:10px 6px;border-radius:10px;cursor:pointer;border:1px solid #ef444440;background:#ef444412;text-align:center;transition:all 0.15s" title="Depleted">
+            <div style="font-size:1.5rem">🔴</div>
+            <div style="font-size:0.5625rem;color:#ef4444;font-family:'Share Tech Mono',monospace;margin-top:3px">Depleted</div>
+          </div>
+          <div onclick="openCheckinModalWithLevel(1)" style="flex:1;padding:10px 6px;border-radius:10px;cursor:pointer;border:1px solid #f9731640;background:#f9731612;text-align:center;transition:all 0.15s" title="Low">
+            <div style="font-size:1.5rem">🟠</div>
+            <div style="font-size:0.5625rem;color:#f97316;font-family:'Share Tech Mono',monospace;margin-top:3px">Low</div>
+          </div>
+          <div onclick="openCheckinModalWithLevel(2)" style="flex:1;padding:10px 6px;border-radius:10px;cursor:pointer;border:1px solid #eab30840;background:#eab30812;text-align:center;transition:all 0.15s" title="Steady">
+            <div style="font-size:1.5rem">🟡</div>
+            <div style="font-size:0.5625rem;color:#eab308;font-family:'Share Tech Mono',monospace;margin-top:3px">Steady</div>
+          </div>
+          <div onclick="openCheckinModalWithLevel(3)" style="flex:1;padding:10px 6px;border-radius:10px;cursor:pointer;border:1px solid #22c55e40;background:#22c55e12;text-align:center;transition:all 0.15s" title="Good">
+            <div style="font-size:1.5rem">🟢</div>
+            <div style="font-size:0.5625rem;color:#22c55e;font-family:'Share Tech Mono',monospace;margin-top:3px">Good</div>
+          </div>
+          <div onclick="openCheckinModalWithLevel(4)" style="flex:1;padding:10px 6px;border-radius:10px;cursor:pointer;border:1px solid #a855f740;background:#a855f712;text-align:center;transition:all 0.15s" title="Peak">
+            <div style="font-size:1.5rem">⚡</div>
+            <div style="font-size:0.5625rem;color:#a855f7;font-family:'Share Tech Mono',monospace;margin-top:3px">Peak</div>
           </div>
         </div>
         <div id="checkin-log" style="display:flex;flex-direction:column;gap:10px">
@@ -2221,9 +2240,15 @@ let checkinState={morning:{level:-1,factors:[],saved:false},afternoon:{level:-1,
 function _getETTimeStr(){try{return new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});}catch(e){const n=new Date(),h=n.getHours(),m=n.getMinutes();return `${h%12||12}:${m.toString().padStart(2,'0')} ${h>=12?'PM':'AM'}`;}}
 function _getTodayAllDayFactors(){const a=new Set();energyCheckins.filter(c=>c.date===_todayStr()).forEach(c=>{c.factors.forEach(f=>{const d=energyFactors.find(ef=>ef.name===f);if(d&&d.allDay)a.add(f);});});return[...a];}
 function openCheckinModal(){_pendingLevel=-1;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
+function openCheckinModalWithLevel(levelIdx){_pendingLevel=levelIdx;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
 function _renderEnergyLevelPicker(){const el=document.getElementById('energy-level-picker');if(!el)return;el.innerHTML=ENERGY_LEVELS.map((lv,i)=>`<div onclick="_selectEnergyLevel(${i})" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:10px;cursor:pointer;border:1px solid ${_pendingLevel===i?lv.col:'var(--border)'};background:${_pendingLevel===i?lv.col+'22':'var(--surf)'};transition:all 0.15s"><span style="font-size:1.375rem;flex-shrink:0;margin-top:1px">${lv.icon}</span><div><div style="font-size:0.875rem;font-weight:600;color:${_pendingLevel===i?lv.col:'var(--text)'};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:2px">${lv.desc}</div></div></div>`).join('');}
 function _selectEnergyLevel(idx){_pendingLevel=idx;_renderEnergyLevelPicker();}
-function _renderCheckinFactorPicker(){const el=document.getElementById('checkin-factor-picker');if(!el)return;const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};el.innerHTML=energyFactors.map(f=>{const sel=_pendingFactors.includes(f.name);const col=tc[f.type];const ad=f.allDay?' 📌':'';return`<div onclick="_toggleCheckinFactor('${f.name}')" style="padding:5px 11px;border-radius:16px;font-size:0.75rem;cursor:pointer;transition:all 0.15s;border:1px solid ${sel?col:'var(--border)'};background:${sel?col+'22':'var(--surf2)'};color:${sel?col:'var(--text3)'};font-family:'Share Tech Mono',monospace">${f.name}${ad}</div>`;}).join('');}
+function _renderCheckinFactorPicker(){
+  const el=document.getElementById('checkin-factor-picker');if(!el)return;
+  // Normalise any legacy string entries
+  const factors=energyFactors.map(f=>typeof f==='string'?{name:f,type:'neutral',allDay:false}:f);
+  const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};
+  el.innerHTML=factors.map(f=>{const sel=_pendingFactors.includes(f.name);const col=tc[f.type];const ad=f.allDay?' 📌':'';return`<div onclick="_toggleCheckinFactor('${f.name}')" style="padding:5px 11px;border-radius:16px;font-size:0.75rem;cursor:pointer;transition:all 0.15s;border:1px solid ${sel?col:'var(--border)'};background:${sel?col+'22':'var(--surf2)'};color:${sel?col:'var(--text3)'};font-family:'Share Tech Mono',monospace">${f.name}${ad}</div>`;}).join('');}
 function _toggleCheckinFactor(name){if(_pendingFactors.includes(name))_pendingFactors=_pendingFactors.filter(f=>f!==name);else _pendingFactors.push(name);_renderCheckinFactorPicker();}
 function saveCheckinNew(){
   if(_pendingLevel<0){showToast('Select an energy level first');return;}
@@ -2971,9 +2996,11 @@ function _loadFromCloud(uid) {
         // Handle legacy energyFactors (strings) vs new schema (objects)
         if (Array.isArray(d.energyFactors) && d.energyFactors.length > 0) {
           if (typeof d.energyFactors[0] === 'string') {
-            // Legacy string format — keep defaults
+            // Legacy strings — keep default object schema, don't overwrite
           } else {
-            energyFactors = d.energyFactors;
+            // Validate objects have required fields before using
+            const valid = d.energyFactors.every(f => f && typeof f.name === 'string');
+            if (valid) energyFactors = d.energyFactors;
           }
         }
         energyFactors    = d.energyFactors    ?? energyFactors;
