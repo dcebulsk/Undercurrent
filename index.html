@@ -394,6 +394,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <span id="auth-avatar" style="width:20px;height:20px;border-radius:50%;background:var(--surf2);display:inline-flex;align-items:center;justify-content:center;font-size:0.625rem;color:var(--text3);flex-shrink:0">?</span>
         <span id="auth-label">Sign In</span>
       </div>
+      <div class="top-btn" id="sync-btn" onclick="manualSync()" title="Sync now" style="font-size:0.875rem">⟳</div>
       <div class="top-btn" id="vacation-btn" onclick="toggleVacation()">⛺ Away</div>
       <div class="top-btn" onclick="openModal('settings')">⚙</div>
     </div>
@@ -413,7 +414,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <nav class="sidebar">
       <div class="sidebar-section">// core</div>
       <div class="sidebar-item active" id="snav-goals" onclick="showPage('goals',this)">
-        <span class="sidebar-icon">◆</span>Goals
+        <span class="sidebar-icon">◆</span>Currents
       </div>
       <div class="sidebar-item" id="snav-habits" onclick="showPage('habits',this)">
         <span class="sidebar-icon">◎</span>Habits
@@ -653,43 +654,36 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
 
     <!-- ENERGY -->
     <div class="page" id="page-energy">
-      <div class="energy-grid">
-        <div class="card card-accent">
-          <div class="card-title">// energy check-ins · today</div>
-
-          <div class="checkin-slot" id="checkin-slot-morning">
-            <div style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-bottom:9px;display:flex;justify-content:space-between">
-              <span>09:00 AM</span><span class="checkin-status" style="color:var(--text3);font-size:0.6875rem">pending</span>
-            </div>
-            <div class="energy-scale"><div class="elevel" onclick="selEnergy(this,'morning')">😴</div><div class="elevel" onclick="selEnergy(this,'morning')">😐</div><div class="elevel" onclick="selEnergy(this,'morning')">🙂</div><div class="elevel" onclick="selEnergy(this,'morning')">⚡</div><div class="elevel" onclick="selEnergy(this,'morning')">🔥</div></div>
-            <div class="factors-grid" id="factors-morning" style="margin-bottom:10px"></div>
-            <button class="add-btn checkin-save-btn" onclick="saveCheckin('morning')" style="width:100%;text-align:center;padding:7px">Save Check-in</button>
-          </div>
-
-          <div class="checkin-slot" id="checkin-slot-afternoon">
-            <div style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-bottom:9px;display:flex;justify-content:space-between">
-              <span>02:00 PM</span><span class="checkin-status" style="color:var(--text3);font-size:0.6875rem">pending</span>
-            </div>
-            <div class="energy-scale">
-              <div class="elevel" onclick="selEnergy(this,'afternoon')">😴</div><div class="elevel" onclick="selEnergy(this,'afternoon')">😐</div><div class="elevel" onclick="selEnergy(this,'afternoon')">🙂</div><div class="elevel" onclick="selEnergy(this,'afternoon')">⚡</div><div class="elevel" onclick="selEnergy(this,'afternoon')">🔥</div>
-            </div>
-            <div class="factors-grid" id="factors-afternoon" style="margin-bottom:10px"></div>
-            <button class="add-btn checkin-save-btn" onclick="saveCheckin('afternoon')" style="width:100%;text-align:center;padding:7px">Save Check-in</button>
-          </div>
-
-          <div class="checkin-slot" id="checkin-slot-evening" style="opacity:0.45">
-            <div style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-bottom:9px;display:flex;justify-content:space-between">
-              <span>08:00 PM</span><span class="checkin-status" style="font-size:0.6875rem;color:var(--text3)">not yet</span>
-            </div>
-            <div class="energy-scale"><div class="elevel" onclick="selEnergy(this,'evening')">😴</div><div class="elevel" onclick="selEnergy(this,'evening')">😐</div><div class="elevel" onclick="selEnergy(this,'evening')">🙂</div><div class="elevel" onclick="selEnergy(this,'evening')">⚡</div><div class="elevel" onclick="selEnergy(this,'evening')">🔥</div></div>
-            <div class="factors-grid" id="factors-evening" style="margin-bottom:10px"></div>
-            <button class="add-btn checkin-save-btn" onclick="saveCheckin('evening')" style="width:100%;text-align:center;padding:7px">Save Check-in</button>
+      <div class="card card-accent">
+        <div class="card-title">// energy check-ins · today
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="checkin-goal-dots" style="display:flex;gap:4px"></div>
+            <button class="add-btn" onclick="openCheckinModal()">+ Log Check-in</button>
           </div>
         </div>
-        <div class="card">
-          <div class="card-title">// factor correlations · 30 days</div>
-          <div id="factor-trends"></div>
+        <div id="checkin-log" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace;text-align:center;padding:16px">No check-ins yet today. Tap + Log Check-in.</div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-title">// factor correlations · 30 days</div>
+        <div id="factor-trends" style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace">Log check-ins daily to see trends.</div>
+      </div>
+    </div>
+
+    <!-- ENERGY CHECK-IN MODAL -->
+    <div class="modal-overlay" id="modal-checkin">
+      <div class="modal">
+        <div class="modal-title">Log Energy Check-in
+          <span id="checkin-modal-time" style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-left:8px"></span>
+          <button class="modal-close" onclick="closeModal('checkin')">✕</button>
+        </div>
+        <div class="modal-section">How are you feeling right now?</div>
+        <div id="energy-level-picker" style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px"></div>
+        <div class="modal-section">Factors</div>
+        <div style="font-size:0.6875rem;color:var(--text3);margin-bottom:8px">📌 = applies all day and auto-carries forward</div>
+        <div id="checkin-factor-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px"></div>
+        <button class="modal-save" onclick="saveCheckinNew()">Save Check-in</button>
       </div>
     </div>
 
@@ -705,7 +699,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   </div><!-- end body-wrap -->
 
   <div class="bnav">
-    <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Goals</div></div>
+    <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Currents</div></div>
     <div class="bnav-item" id="bnav-habits" onclick="showPage('habits',this)"><div class="bnav-icon">◎</div><div class="bnav-label">Habits</div></div>
     <div class="bnav-item" id="bnav-tasks" onclick="showPage('tasks',this)"><div class="bnav-icon">◻</div><div class="bnav-label">Tasks</div></div>
     <div class="bnav-item" id="bnav-focus" onclick="showPage('focus',this)"><div class="bnav-icon">◷</div><div class="bnav-label">Focus</div></div>
@@ -1023,10 +1017,12 @@ function _todayStr() {
 function _initDailyReset() {
   const today = _todayStr();
   if (dailyTaskDate !== today) {
-    // Reset pinned/daily tasks
     dailyTaskIds = new Set([...pinnedTaskIds]);
     dailyTaskDate = today;
     _saveDailyState();
+    // Reset Energy Level Check-in current measure for new day
+    const eg = goals.find(g => g.name === 'Energy Level Check-in');
+    if (eg) { eg.measureCurrent = 0; }
   }
 }
 
@@ -1048,15 +1044,10 @@ function _resetHabitsDoneIfNewDay() {
 }
 
 function _checkEnergyReset(cloudDate) {
-  // Called after Firestore load with the date stored in cloud data
-  // If the cloud energy is from a different day, reset it
   const today = _todayStr();
   if (cloudDate !== today) {
-    checkinState = {
-      morning:   { level: -1, factors: [], saved: false },
-      afternoon: { level: -1, factors: [], saved: false },
-      evening:   { level: -1, factors: [], saved: false },
-    };
+    // Filter out any checkins not from today (keep historical)
+    energyCheckins = energyCheckins.filter(c => c.date === today);
     cloudSave();
   }
 }
@@ -1115,7 +1106,7 @@ let labels = ['Work','Gamedev','Health','Personal','Finance','Creative'];
 let _habitLabelFilter = 'all';
 let _taskLabelFilter  = 'all';
 
-let energyFactors = ['Exercise','Water','Meds','Good Sleep','Outside','Caffeine','Stress','Alcohol','Social','Creative Work','Late Night','Screen Time'];
+// energyFactors replaced
 
 // ── QUOTES ────────────────────────────────────────────────
 // Each: { text, character, source }
@@ -1391,12 +1382,14 @@ function toggleHabit(id, sourceEl) {
   h.done = !h.done;
   if (h.done && h.rolloverDebt>0) h.rolloverDebt=0;
   const today = _todayStr();
-  // Per-habit completion log
   if (!h.completionLog) h.completionLog = {};
   if (h.done) {
     h.completionLog[today] = true;
     habitCompletions[today] = (habitCompletions[today] || 0) + 1;
-    _addXP(XP_HABIT[h.diff] || 30, sourceEl);
+    const xpAmt = XP_HABIT[h.diff] || 30;
+    _addXP(xpAmt, sourceEl);
+    playHabitTaskSound();
+    _awardLinkedCurrentXP(h.goal, xpAmt);
   } else {
     delete h.completionLog[today];
     habitCompletions[today] = Math.max(0, (habitCompletions[today] || 1) - 1);
@@ -1405,6 +1398,7 @@ function toggleHabit(id, sourceEl) {
   recalcStreaks();
   renderHabits();
   buildCalendar();
+  cloudSave();
 }
 
 // ── CALENDAR ──────────────────────────────────────────────
@@ -1849,19 +1843,14 @@ function toggleTask(id, sourceEl){
   if (t.done) {
     _addXP(xpAmt, sourceEl);
     playHabitTaskSound();
-    // If in current tasks, schedule auto-remove after 3s
-    if (dailyTaskIds.has(id)) {
-      _scheduleAutoRemove(id);
-    }
+    _awardLinkedCurrentXP(t.goal, xpAmt);
+    if (dailyTaskIds.has(id)) _scheduleAutoRemove(id);
   } else {
     _removeXP(xpAmt);
-    // Uncompleted — cancel any pending removal
-    if (_dailyRemoveTimers[id]) {
-      clearTimeout(_dailyRemoveTimers[id]);
-      delete _dailyRemoveTimers[id];
-    }
+    if (_dailyRemoveTimers[id]) { clearTimeout(_dailyRemoveTimers[id]); delete _dailyRemoveTimers[id]; }
   }
   renderTasks(); renderDailyTasks();
+  cloudSave();
 }
 
 function _scheduleAutoRemove(id) {
@@ -2186,9 +2175,12 @@ function _addSessionToLog(task, goal, mins) {
   const placeholder = log.querySelector('div[style*="No sessions"]');
   if (placeholder) placeholder.remove();
   const xp = mins >= 50 ? 150 : mins >= 25 ? 75 : 40;
+  // Award player XP
+  _addXP(xp, null);
+  // Award linked current XP
   if (goal) {
     const g = goals.find(x => x.name === goal);
-    if (g) { g.xp = Math.min(g.xp + xp, g.xpNext); renderGoals(); }
+    if (g) { g.xp = Math.min(g.xp + xp, g.xpNext); renderGoals(); cloudSave(); }
   }
   const item = document.createElement('div');
   item.className = 'slog-item';
@@ -2202,91 +2194,55 @@ function _addSessionToLog(task, goal, mins) {
   log.appendChild(item);
 }
 
-// ── ENERGY ────────────────────────────────────────────────
-// ── ENERGY STATE ──────────────────────────────────────────
-let checkinState = {
-  morning:   { level: -1, factors: [], saved: false },
-  afternoon: { level: -1, factors: [], saved: false },
-  evening:   { level: -1, factors: [], saved: false },
-};
-
-function toggleFactor(slot, factor) {
-  const s = checkinState[slot];
-  if (s.saved) return;
-  if (s.factors.includes(factor)) s.factors.splice(s.factors.indexOf(factor), 1);
-  else s.factors.push(factor);
-  renderFactors('factors-' + slot, slot);
-  cloudSave();
+// ── ENERGY SYSTEM ────────────────────────────────────────
+let energyFactors = [
+  {name:'Exercise',    type:'positive', allDay:false},
+  {name:'Good Sleep',  type:'positive', allDay:true},
+  {name:'Water',       type:'positive', allDay:false},
+  {name:'Nutrition',   type:'positive', allDay:true},
+  {name:'Low Stress',  type:'positive', allDay:false},
+  {name:'Outside',     type:'positive', allDay:false},
+  {name:'Social',      type:'positive', allDay:false},
+  {name:'Focused',     type:'positive', allDay:false},
+  {name:'Alcohol',     type:'negative', allDay:true},
+  {name:'Screen Time', type:'negative', allDay:true},
+  {name:'Caffeine',    type:'neutral',  allDay:false},
+  {name:'Anxious',     type:'negative', allDay:false},
+];
+const ENERGY_LEVELS = [
+  {icon:'🔴',name:'Depleted',desc:'Running on fumes. Basic tasks feel hard. Rest is the priority.',col:'#ef4444'},
+  {icon:'🟠',name:'Low',     desc:'Sluggish but functional. Getting through the day, not thriving.',col:'#f97316'},
+  {icon:'🟡',name:'Steady',  desc:'Neutral baseline. Capable, nothing special. Showing up.',col:'#eab308'},
+  {icon:'🟢',name:'Good',    desc:'Clear-headed and motivated. Things are flowing.',col:'#22c55e'},
+  {icon:'⚡',name:'Peak',    desc:'Everything clicks. High focus, high drive. Make the most of it.',col:'#a855f7'},
+];
+let energyCheckins=[];let _checkinDate='';let _pendingLevel=-1;let _pendingFactors=[];
+let checkinState={morning:{level:-1,factors:[],saved:false},afternoon:{level:-1,factors:[],saved:false},evening:{level:-1,factors:[],saved:false}};
+function _getETTimeStr(){try{return new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});}catch(e){const n=new Date(),h=n.getHours(),m=n.getMinutes();return `${h%12||12}:${m.toString().padStart(2,'0')} ${h>=12?'PM':'AM'}`;}}
+function _getTodayAllDayFactors(){const a=new Set();energyCheckins.filter(c=>c.date===_todayStr()).forEach(c=>{c.factors.forEach(f=>{const d=energyFactors.find(ef=>ef.name===f);if(d&&d.allDay)a.add(f);});});return[...a];}
+function openCheckinModal(){_pendingLevel=-1;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
+function _renderEnergyLevelPicker(){const el=document.getElementById('energy-level-picker');if(!el)return;el.innerHTML=ENERGY_LEVELS.map((lv,i)=>`<div onclick="_selectEnergyLevel(${i})" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:10px;cursor:pointer;border:1px solid ${_pendingLevel===i?lv.col:'var(--border)'};background:${_pendingLevel===i?lv.col+'22':'var(--surf)'};transition:all 0.15s"><span style="font-size:1.375rem;flex-shrink:0;margin-top:1px">${lv.icon}</span><div><div style="font-size:0.875rem;font-weight:600;color:${_pendingLevel===i?lv.col:'var(--text)'};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:2px">${lv.desc}</div></div></div>`).join('');}
+function _selectEnergyLevel(idx){_pendingLevel=idx;_renderEnergyLevelPicker();}
+function _renderCheckinFactorPicker(){const el=document.getElementById('checkin-factor-picker');if(!el)return;const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};el.innerHTML=energyFactors.map(f=>{const sel=_pendingFactors.includes(f.name);const col=tc[f.type];const ad=f.allDay?' 📌':'';return`<div onclick="_toggleCheckinFactor('${f.name}')" style="padding:5px 11px;border-radius:16px;font-size:0.75rem;cursor:pointer;transition:all 0.15s;border:1px solid ${sel?col:'var(--border)'};background:${sel?col+'22':'var(--surf2)'};color:${sel?col:'var(--text3)'};font-family:'Share Tech Mono',monospace">${f.name}${ad}</div>`;}).join('');}
+function _toggleCheckinFactor(name){if(_pendingFactors.includes(name))_pendingFactors=_pendingFactors.filter(f=>f!==name);else _pendingFactors.push(name);_renderCheckinFactorPicker();}
+function saveCheckinNew(){
+  if(_pendingLevel<0){showToast('Select an energy level first');return;}
+  const c={id:Date.now(),time:Date.now(),timeStr:_getETTimeStr(),level:_pendingLevel,factors:[..._pendingFactors],date:_todayStr()};
+  energyCheckins.push(c);_checkinDate=_todayStr();
+  const cnt=energyCheckins.filter(x=>x.date===_todayStr()).length;
+  const eg=goals.find(g2=>g2.name==='Energy Level Check-in');
+  if(eg){eg.measureCurrent=cnt;renderGoals();}
+  if(cnt===3){_addXP(50,null);_awardEnergyCurrentXP();showToast('3 check-ins complete! +50 XP 🎉');}
+  renderCheckinLog();closeModal('checkin');cloudSave();
 }
-
-function selEnergy(el, slot) {
-  const s = checkinState[slot];
-  if (s.saved) return;
-  const scale = el.closest('.energy-scale');
-  [...scale.children].forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  s.level = [...scale.children].indexOf(el);
-  cloudSave();
-}
-
-function saveCheckin(slot) {
-  const s = checkinState[slot];
-  s.saved = true;
-  const slotEl = document.getElementById('checkin-slot-' + slot);
-  if (slotEl) {
-    const statusEl = slotEl.querySelector('.checkin-status');
-    if (statusEl) { statusEl.textContent = '✓ logged'; statusEl.style.color = 'var(--teal)'; }
-    const saveBtn = slotEl.querySelector('.checkin-save-btn');
-    if (saveBtn) saveBtn.style.display = 'none';
-  }
-  renderFactors('factors-' + slot, slot);
-  cloudSave();
-}
-
-function renderEnergyScales() {
-  // Restore emoji level button active state from checkinState
-  ['morning','afternoon','evening'].forEach(slot => {
-    const s = checkinState[slot];
-    const slotEl = document.getElementById('checkin-slot-' + slot);
-    if (!slotEl) return;
-    // Restore level
-    const btns = slotEl.querySelectorAll('.elevel');
-    btns.forEach((b, i) => b.classList.toggle('active', i === s.level));
-    // Restore saved state
-    if (s.saved) {
-      const statusEl = slotEl.querySelector('.checkin-status');
-      if (statusEl) { statusEl.textContent = '✓ logged'; statusEl.style.color = 'var(--teal)'; }
-      const saveBtn = slotEl.querySelector('.checkin-save-btn');
-      if (saveBtn) saveBtn.style.display = 'none';
-    }
-  });
-}
-
-function renderFactors(containerId, slot) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  // slot can be the old boolean 'locked' for backwards compat, or a string slot name
-  const isLegacyCall = typeof slot === 'boolean';
-  if (isLegacyCall) {
-    // Legacy: just render chips with onclick toggle (settings modal etc)
-    el.innerHTML = energyFactors.map(f =>
-      `<div class="factor-chip" onclick="this.classList.toggle('active')">${f}</div>`
-    ).join('');
-    return;
-  }
-  const state = checkinState[slot];
-  const locked = state && state.saved;
-  el.innerHTML = energyFactors.map(f => {
-    const isActive = state && (state.factors||[]).includes(f);
-    return `<div class="factor-chip${isActive ? ' active' : ''}"
-      ${locked ? '' : `onclick="toggleFactor('${slot}','${f}')"`}
-      style="${locked ? 'cursor:default;opacity:0.7' : ''}">${f}</div>`;
-  }).join('');
-}
-function renderTrends() {
-  document.getElementById('factor-trends').innerHTML =
-    `<div style="font-size:0.8125rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">Log check-ins daily to see trends</div>`;
-}
+function _awardEnergyCurrentXP(){const g=goals.find(g2=>g2.name==='Energy Level Check-in');if(g){g.xp=Math.min((g.xp||0)+100,g.xpNext||1000);renderGoals();}}
+function renderCheckinLog(){const el=document.getElementById('checkin-log');if(!el)return;const today=energyCheckins.filter(c=>c.date===_todayStr());const dots=document.getElementById('checkin-goal-dots');if(dots)dots.innerHTML=[0,1,2].map(i=>`<div style="width:10px;height:10px;border-radius:50%;background:${i<today.length?'var(--teal)':'var(--surf3)'};transition:background 0.3s"></div>`).join('');if(!today.length){el.innerHTML='<div style="font-size:0.75rem;color:var(--text3);font-family:var(--mono);text-align:center;padding:16px">No check-ins yet today. Tap + Log Check-in.</div>';return;}const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};el.innerHTML=today.map(c=>{const lv=ENERGY_LEVELS[c.level]||ENERGY_LEVELS[2];const chips=c.factors.map(f=>{const def=energyFactors.find(ef=>ef.name===f);const col=def?tc[def.type]:'var(--text3)';const ad=def&&def.allDay?' 📌':'';return`<span style="padding:2px 8px;border-radius:10px;font-size:0.625rem;color:${col};background:${col}18;border:1px solid ${col}40;font-family:'Share Tech Mono',monospace">${f}${ad}</span>`;}).join('');return`<div style="padding:12px;background:var(--surf);border:1px solid ${lv.col}30;border-left:3px solid ${lv.col};border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:1.25rem">${lv.icon}</span><div style="flex:1"><div style="font-size:0.875rem;font-weight:600;color:${lv.col};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${c.timeStr}</div></div></div><div style="font-size:0.6875rem;color:var(--text3);margin-bottom:${chips?'8px':'0'};line-height:1.5">${lv.desc}</div>${chips?`<div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>`:''}</div>`;}).join('');}
+function toggleFactor(slot,factor){}
+function selEnergy(el,slot){}
+function saveCheckin(slot){}
+function renderEnergyScales(){renderCheckinLog();}
+function renderFactors(containerId,slot){}
+function renderTrends(){}
 
 // ── QUOTES ────────────────────────────────────────────────
 function _renderQuoteBanner() {
@@ -2766,6 +2722,16 @@ function _addXP(amount, sourceEl) {
   _showXPPopup(amount, sourceEl);
 }
 
+function _awardLinkedCurrentXP(goalName, xpAmount) {
+  if (!goalName) return;
+  const g = goals.find(x => x.name === goalName);
+  if (g) {
+    g.xp = Math.min((g.xp||0) + xpAmount, g.xpNext||1000);
+    renderGoals();
+    cloudSave();
+  }
+}
+
 function _removeXP(amount) {
   totalXP = Math.max(0, totalXP - amount);
   _lastLevel = _calcLevel(totalXP).level;
@@ -2929,6 +2895,20 @@ function cloudSave() {
   _saveTimer = setTimeout(_doCloudSave, 1500); // debounce 1.5s
 }
 
+let _manualSyncCooldown = false;
+function manualSync() {
+  if (_manualSyncCooldown) { showToast('Sync cooling down…'); return; }
+  if (!_currentUser) { showToast('Sign in to sync'); return; }
+  _manualSyncCooldown = true;
+  const btn = document.getElementById('sync-btn');
+  if (btn) { btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none'; }
+  _doCloudSave();
+  setTimeout(() => {
+    _manualSyncCooldown = false;
+    if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+  }, 5000);
+}
+
 function _sanitize(obj) {
   // Strip undefined, convert Sets — Firestore can't handle either
   return JSON.parse(JSON.stringify(obj, (k, v) => {
@@ -2944,7 +2924,7 @@ function _doCloudSave() {
   const raw = {
     goals, habits, tasks, quotes,
     labels, totalXP,
-    energyFactors, checkinState,
+    energyFactors, energyCheckins, checkinState,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
@@ -2987,6 +2967,15 @@ function _loadFromCloud(uid) {
         quotes           = d.quotes           ?? [];
         labels           = Array.isArray(d.labels) ? d.labels : labels;
         if (d.totalXP !== undefined) totalXP = d.totalXP;
+        energyCheckins   = Array.isArray(d.energyCheckins) ? d.energyCheckins : [];
+        // Handle legacy energyFactors (strings) vs new schema (objects)
+        if (Array.isArray(d.energyFactors) && d.energyFactors.length > 0) {
+          if (typeof d.energyFactors[0] === 'string') {
+            // Legacy string format — keep defaults
+          } else {
+            energyFactors = d.energyFactors;
+          }
+        }
         energyFactors    = d.energyFactors    ?? energyFactors;
         checkinState     = d.checkinState     ?? checkinState;
         // Ensure factors are always plain arrays after Firestore load
@@ -3054,10 +3043,7 @@ function _rebuildAll() {
   _resetHabitsDoneIfNewDay();
   renderGoals(); renderHabits(); recalcStreaks();
   renderTasks(); renderDailyTasks(); buildCalendar();
-  renderFactors('factors-morning',   'morning');
-  renderFactors('factors-afternoon', 'afternoon');
-  renderFactors('factors-evening',   'evening');
-  renderEnergyScales();
+  renderCheckinLog();
   _renderLabelFilterChips();
   renderTrends(); updateXPBar();
   _lastLevel = _calcLevel(totalXP).level;
@@ -3234,7 +3220,7 @@ function buildReview() {
         : `↓ ${Math.abs(diff)}% behind last week's pace — keep going`}
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
         <div style="font-size:1.25rem;font-weight:700;color:var(--amber);font-family:'Rajdhani',sans-serif">${habitCompletions['_overall']||0}</div>
         <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">day streak</div>
@@ -3247,7 +3233,32 @@ function buildReview() {
         <div style="font-size:1.25rem;font-weight:700;color:var(--teal);font-family:'Rajdhani',sans-serif">${tasks.filter(t=>t.done).length}</div>
         <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">tasks done</div>
       </div>
-    </div>`;
+    </div>
+
+    <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px;letter-spacing:1px">ENERGY · TODAY</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      ${energyCheckins.filter(c=>c.date===_todayStr()).map(c=>{
+        const lv=ENERGY_LEVELS[c.level]||ENERGY_LEVELS[2];
+        return `<div style="flex:1;padding:8px;background:var(--surf);border:1px solid ${lv.col}30;border-radius:8px;text-align:center">
+          <div style="font-size:1.125rem">${lv.icon}</div>
+          <div style="font-size:0.5625rem;color:${lv.col};font-family:'Share Tech Mono',monospace;margin-top:2px">${c.timeStr}</div>
+        </div>`;
+      }).join('') || `<div style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace">No check-ins yet today</div>`}
+    </div>
+
+    ${goals.length ? `<div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:6px;letter-spacing:1px">CURRENTS · XP PROGRESS</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${goals.map(g=>{
+        const pct=Math.round((g.xp||0)/(g.xpNext||1000)*100);
+        return `<div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:0.75rem;color:var(--text2);min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+          <div style="width:80px;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden;flex-shrink:0">
+            <div style="height:100%;width:${pct}%;background:var(--purple2)"></div>
+          </div>
+          <div style="font-size:0.625rem;color:var(--purple);font-family:'Share Tech Mono',monospace;flex-shrink:0">${pct}%</div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
 }
 
 // ── INIT ──────────────────────────────────────────────────
@@ -3259,18 +3270,23 @@ _loadSound('happy',     './snd_happy.wav');
 _loadSound('synthetic', './snd_synthetic.wav');
 _loadSound('levelup',   './snd_levelup.wav');
 
+// Create default "Energy Level Check-in" current if it doesn't exist
+if (!goals.find(g => g.name === 'Energy Level Check-in')) {
+  goals.push({
+    id: nextGoalId++, name: 'Energy Level Check-in',
+    measureLabel: 'Check-ins today', measureCurrent: 0, measureStart: 0, measureTarget: 3,
+    xp: 0, xpNext: 500, level: 1, category: 'Health', links: [], subgoals: [],
+  });
+}
+
 renderGoals();
 renderHabits();
 recalcStreaks();
 renderTasks(); renderDailyTasks();
 buildCalendar();
 recalcStreaks();
-renderFactors('factors-morning', 'morning');
-renderFactors('factors-afternoon', 'afternoon');
-renderFactors('factors-evening', 'evening');
-renderEnergyScales();
+renderCheckinLog();
 _renderLabelFilterChips();
-renderTrends();
 updateXPBar();
 _lastLevel = _calcLevel(totalXP).level;
 loadTheme();
