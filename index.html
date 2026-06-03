@@ -717,6 +717,19 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   </div><!-- end content -->
   </div><!-- end body-wrap -->
 
+    <!-- YESTERDAY POPUP -->
+    <div id="yesterday-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,5,15,0.88);z-index:600;align-items:center;justify-content:center">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;max-width:380px;width:90%;max-height:80vh;overflow-y:auto;margin:16px">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:1.25rem;font-weight:700;color:var(--purple);margin-bottom:4px">Did you complete these yesterday?</div>
+        <div style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:16px" id="yesterday-date-lbl"></div>
+        <div id="yesterday-habit-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+        <div style="display:flex;gap:10px">
+          <button onclick="submitYesterday()" style="flex:1;padding:12px;background:var(--purple2);border:none;border-radius:10px;color:#fff;font-size:0.875rem;font-family:'Exo 2',sans-serif;font-weight:600;cursor:pointer">Save</button>
+          <button onclick="dismissYesterday()" style="flex:1;padding:12px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:0.875rem;font-family:'Exo 2',sans-serif;cursor:pointer">Skip</button>
+        </div>
+      </div>
+    </div>
+
   <div class="bnav">
     <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Currents</div></div>
     <div class="bnav-item" id="bnav-habits" onclick="showPage('habits',this)"><div class="bnav-icon">◎</div><div class="bnav-label">Habits</div></div>
@@ -1355,37 +1368,64 @@ function sortHabits(type,el) {
 function getMult(c){return c>=0.9?1.5:c>=0.7?1.25:c>=0.5?1.0:0.75}
 
 function renderHabits() {
-  let list = habits.filter(h=>(h.days||[]).includes(selectedDay));
+  const DAY_LETTERS = ['M','T','W','T','F','S','S'];
+  // Show ALL habits — greyed if not scheduled today
+  let list = [...habits];
   if (_habitLabelFilter !== 'all') list = list.filter(h => h.label === _habitLabelFilter);
   if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
   else if (habitSort==='difficulty') list=[...list].sort((a,b)=>({'Easy':0,'Medium':1,'Hard':2}[b.diff]||0)-({'Easy':0,'Medium':1,'Hard':2}[a.diff]||0));
   else if (habitSort==='consistency') list=[...list].sort((a,b)=>b.consistency-a.consistency);
 
+  const todayDow = (new Date().getDay() + 6) % 7; // Mon=0
+
   document.getElementById('habit-list').innerHTML = list.map(h=>{
+    const isActive = (h.days||[]).includes(selectedDay);
+    const isToday  = selectedDay === todayDow;
+    const inactive = !isActive;
     const diffCls = {Easy:'bd-easy',Medium:'bd-med',Hard:'bd-hard'}[h.diff];
     const dots = (h.streakData||[]).map(v=>`<div class="sdot" style="background:${v?'var(--purple2)':'var(--surf3)'};${v?'box-shadow:0 0 4px rgba(124,95,230,0.4)':''}"></div>`).join('');
+
+    // Active days display — highlight scheduled days
+    const dayDots = DAY_LETTERS.map((ltr, i) => {
+      const scheduled = (h.days||[]).includes(i);
+      return `<span style="font-size:0.5625rem;font-family:'Share Tech Mono',monospace;color:${scheduled?'var(--purple)':'var(--surf3)'};font-weight:${scheduled?'700':'400'}">${ltr}</span>`;
+    }).join('');
+
     const rolloverBar = h.miss==='rollover'&&h.rolloverDebt>0?`
       <div style="margin-top:6px">
         <div style="display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:3px"><span>Rollover debt: ${h.rolloverDebt}d</span><span>Need ${h.rolloverDebt+1}× to clear</span></div>
         <div style="background:var(--surf3);border-radius:3px;height:4px"><div style="width:0%;height:4px;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--pink))"></div></div>
       </div>`:'';
-    return `<div class="habit-row">
-      <div class="hcheck ${h.done?'done':h.miss==='rollover'&&h.rolloverDebt>0?'rollover':''}" onclick="toggleHabit(${h.id},this)">${h.done?'✓':h.miss==='rollover'&&h.rolloverDebt>0?'↩':''}</div>
+
+    const inactiveOverlay = inactive ? `style="opacity:0.35;pointer-events:none"` : '';
+    const inactiveBadge   = inactive ? `<span class="badge" style="background:rgba(100,100,120,0.15);border-color:rgba(100,100,120,0.3);color:var(--text3);font-size:0.5625rem">off today</span>` : '';
+
+    return `<div class="habit-row" ${inactiveOverlay}>
+      <div class="hcheck ${inactive?'':''}${!inactive&&h.done?'done':!inactive&&h.miss==='rollover'&&h.rolloverDebt>0?'rollover':''}"
+           ${inactive?'':'onclick="toggleHabit('+h.id+',this)"'}
+           style="${inactive?'cursor:default;':''}">
+        ${!inactive&&h.done?'✓':!inactive&&h.miss==='rollover'&&h.rolloverDebt>0?'↩':''}
+      </div>
       <div class="habit-body">
-        <div class="habit-name${h.done?' done':''}">${h.name}</div>
+        <div class="habit-name${!inactive&&h.done?' done':''}">${h.name}</div>
         <div class="habit-meta">
           <span class="badge ${diffCls}">${h.diff}</span>
           ${h.goal?`<span class="badge bd-goal">→ ${h.goal}</span>`:''}
           ${h.label?`<span class="badge" style="background:rgba(67,232,249,0.1);border-color:rgba(67,232,249,0.25);color:var(--cyan)">${h.label}</span>`:''}
-          <span class="badge ${h.miss==='rollover'?'bd-ro':'bd-rs'}">${h.miss==='rollover'?'↩ rollover':'✕ reset'}</span>
-          <span class="mult-badge">${getMult(h.consistency)}×</span>
+          ${inactiveBadge}
+          ${!inactive?`<span class="badge ${h.miss==='rollover'?'bd-ro':'bd-rs'}">${h.miss==='rollover'?'↩ rollover':'✕ reset'}</span>`:''}
+          ${!inactive?`<span class="mult-badge">${getMult(h.consistency)}×</span>`:''}
         </div>
-        <div class="streak-row">${dots}<span class="streak-lbl">🔥 ${h.streak}d</span></div>
-        ${rolloverBar}
+        <div class="streak-row">
+          ${!inactive?dots:''}
+          <span class="streak-lbl" style="${inactive?'color:var(--text3)':''}">🔥 ${h.streak}d</span>
+          <span style="margin-left:6px;display:flex;gap:3px;align-items:center">${dayDots}</span>
+        </div>
+        ${!inactive?rolloverBar:''}
       </div>
-      <div style="font-size:1.25rem;color:var(--text3);cursor:pointer;padding:2px 0 0 6px;flex-shrink:0" onclick="openModal('add-habit',${h.id})">⋯</div>
+      <div style="font-size:1.25rem;color:var(--text3);cursor:pointer;padding:2px 0 0 6px;flex-shrink:0;pointer-events:all" onclick="openModal('add-habit',${h.id})">⋯</div>
     </div>`;
-  }).join('') || `<div style="font-size:0.8125rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">No habits on this day</div>`;
+  }).join('') || `<div style="font-size:0.8125rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">No habits added yet</div>`;
 
   document.getElementById('habit-avgs').innerHTML = habits.map(h=>`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
@@ -3046,6 +3086,8 @@ function _loadFromCloud(uid) {
         // Check if stored energy is from today — reset if it's a new day
         _checkEnergyReset(d.energyDate || '');
         _rebuildAll();
+        // Check yesterday popup after cloud data is loaded
+        setTimeout(_checkYesterdayPopup, 800);
         _setSyncBar('✓ Data loaded', 'rgba(45,212,191,0.12)');
         setTimeout(() => _setSyncBar(null), 2000);
       } else {
@@ -3288,6 +3330,95 @@ function buildReview() {
     </div>` : ''}`;
 }
 
+// ── YESTERDAY POPUP ───────────────────────────────────────
+let _yesterdayChecked = {}; // {habitId: true/false}
+
+function _checkYesterdayPopup() {
+  const today = _todayStr();
+  const lastSeen = localStorage.getItem('uc-yesterday-check');
+  if (lastSeen === today) return; // already shown today
+
+  // Get yesterday's date and day-of-week
+  const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
+  const yKey = yDate.toISOString().split('T')[0];
+  const yDow = (yDate.getDay() + 6) % 7;
+
+  // Find habits scheduled yesterday that have no completion log entry
+  const missed = habits.filter(h => {
+    if (!(h.days||[]).includes(yDow)) return false;
+    return !(h.completionLog||{})[yKey]; // not already logged
+  });
+
+  if (!missed.length) {
+    localStorage.setItem('uc-yesterday-check', today);
+    return;
+  }
+
+  // Build popup
+  _yesterdayChecked = {};
+  missed.forEach(h => _yesterdayChecked[h.id] = false);
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('yesterday-date-lbl').textContent =
+    `${months[yDate.getMonth()]} ${yDate.getDate()} · ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][yDow]}`;
+
+  document.getElementById('yesterday-habit-list').innerHTML = missed.map(h => `
+    <div onclick="_toggleYesterdayHabit(${h.id},this)"
+         id="yh-${h.id}"
+         style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s">
+      <div style="width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.875rem;transition:all 0.15s" id="yhchk-${h.id}"></div>
+      <div>
+        <div style="font-size:0.875rem;color:var(--text)">${h.name}</div>
+        <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${h.diff}</div>
+      </div>
+    </div>`).join('');
+
+  const ov = document.getElementById('yesterday-overlay');
+  ov.style.display = 'flex';
+}
+
+function _toggleYesterdayHabit(id, el) {
+  _yesterdayChecked[id] = !_yesterdayChecked[id];
+  const chk = document.getElementById('yhchk-' + id);
+  const row = document.getElementById('yh-' + id);
+  if (_yesterdayChecked[id]) {
+    chk.textContent = '✓';
+    chk.style.background = 'var(--purple2)';
+    chk.style.borderColor = 'var(--purple2)';
+    chk.style.color = '#fff';
+    row.style.borderColor = 'var(--purple2)';
+  } else {
+    chk.textContent = '';
+    chk.style.background = '';
+    chk.style.borderColor = 'var(--border2)';
+    row.style.borderColor = 'var(--border)';
+  }
+}
+
+function submitYesterday() {
+  const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
+  const yKey  = yDate.toISOString().split('T')[0];
+  const yDow  = (yDate.getDay() + 6) % 7;
+  let changed = false;
+  for (const [idStr, done] of Object.entries(_yesterdayChecked)) {
+    if (!done) continue;
+    const id = parseInt(idStr);
+    const h  = habits.find(x => x.id === id);
+    if (!h) continue;
+    if (!h.completionLog) h.completionLog = {};
+    h.completionLog[yKey] = true;
+    habitCompletions[yKey] = (habitCompletions[yKey]||0) + 1;
+    changed = true;
+  }
+  if (changed) { recalcStreaks(); renderHabits(); cloudSave(); }
+  dismissYesterday();
+}
+
+function dismissYesterday() {
+  document.getElementById('yesterday-overlay').style.display = 'none';
+  localStorage.setItem('uc-yesterday-check', _todayStr());
+}
+
 // ── INIT ──────────────────────────────────────────────────
 // Load sounds
 _loadSound('bells_a',   './snd_bells_a.wav');
@@ -3332,6 +3463,8 @@ setInterval(() => {
   recalcStreaks();
   renderDailyTasks();
 }, 60000);
+// Check yesterday popup after data settles
+setTimeout(_checkYesterdayPopup, 1200);
 
 // ── SERVICE WORKER ────────────────────────────────────────
 if ('serviceWorker' in navigator) {
