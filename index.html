@@ -495,8 +495,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
             </div>
           </div>
           <div id="section-habits">
-          <div class="day-tabs">
-            <div class="dtab active" onclick="selDay(this,0)">Mon</div>
+          <div class="day-tabs" id="day-tabs">
+            <div class="dtab" onclick="selDay(this,0)">Mon</div>
             <div class="dtab" onclick="selDay(this,1)">Tue</div>
             <div class="dtab" onclick="selDay(this,2)">Wed</div>
             <div class="dtab" onclick="selDay(this,3)">Thu</div>
@@ -1151,7 +1151,7 @@ let quotes = [];
 let quoteIndex = 0;
 
 // ── STATE ─────────────────────────────────────────────────
-let selectedDay = 0;
+let selectedDay = (new Date().getDay() + 6) % 7; // Mon=0, auto-selects today
 let habitSort = 'default';
 let taskSort = 'priority';
 let vacation = false;
@@ -3600,6 +3600,9 @@ if (!goals.find(g => g.name === 'Energy Level Check-in')) {
 renderGoals();
 renderHabits();
 recalcStreaks();
+// Activate today's day tab
+const dayTabs = document.querySelectorAll('#day-tabs .dtab');
+if (dayTabs[selectedDay]) dayTabs[selectedDay].classList.add('active');
 renderTasks(); renderDailyTasks();
 buildCalendar();
 recalcStreaks();
