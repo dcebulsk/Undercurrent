@@ -384,7 +384,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <span id="auth-label">Sign In</span>
       </div>
       <div class="top-btn" id="sync-btn" onclick="manualSync()" title="Sync now" style="font-size:0.875rem">⟳</div>
-      <div class="top-btn" id="vacation-btn" onclick="toggleVacation()">⛺ Away</div>
       <div class="top-btn" onclick="openModal('settings')">⚙</div>
     </div>
   </div>
@@ -424,7 +423,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <div class="sidebar-flux">
           <div class="sidebar-flux-lbl">// vacation mode</div>
           <div style="margin-top:8px">
-            <div class="top-btn" id="vacation-sidebar-btn" onclick="toggleVacation()" style="display:inline-block">⛺ Away</div>
+
           </div>
         </div>
       </div>
@@ -434,14 +433,11 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="content" id="content">
 
     <!-- GOALS -->
+    <div id="vacation-banner" style="display:none;padding:12px 16px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);border-radius:10px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:#eab308;text-align:center">
+      ⛺ <strong>Vacation Mode is ON</strong> — habits are paused and streaks are frozen. Turn off in Settings.
+    </div>
     <div class="page active" id="page-goals">
-      <div id="quote-banner" style="display:none;padding:12px 14px;background:linear-gradient(135deg,rgba(124,95,230,0.07),rgba(240,109,176,0.05));border:1px solid rgba(157,127,245,0.15);border-radius:10px;cursor:pointer" onclick="cycleQuote()" title="Tap for next quote">
-        <div id="quote-banner-text" style="font-size:0.8125rem;color:var(--text2);font-style:italic;line-height:1.5;margin-bottom:5px"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div id="quote-banner-attr" style="font-size:0.6875rem;font-family:'Share Tech Mono',monospace"></div>
-          <div style="font-size:0.6875rem;color:var(--dim);font-family:'Share Tech Mono',monospace">tap to cycle ↻</div>
-        </div>
-      </div>
+
       <div class="card card-accent">
         <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('currents')">// currents
           <div style="display:flex;align-items:center;gap:8px">
@@ -895,25 +891,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   <div class="modal">
     <div class="modal-title">Settings<button class="modal-close" onclick="closeModal('settings')">✕</button></div>
 
-    <div class="modal-section">Quotes</div>
-    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:10px">Shown on the Goals page. Add manually or upload a CSV (one quote per row: <span style="color:var(--purple)">quote text, character, source</span>).</div>
-
-    <div id="quotes-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:180px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent"></div>
-
-    <div style="display:flex;flex-direction:column;gap:6px">
-      <input class="field-input" id="quote-text-input" placeholder='Quote text'>
-      <div style="display:flex;gap:6px">
-        <input class="field-input" id="quote-char-input" placeholder="Character / Speaker" style="flex:1">
-        <input class="field-input" id="quote-source-input" placeholder="Source (game, film…)" style="flex:1">
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="opt-btn active" onclick="addQuoteManual()" style="flex:1;text-align:center">+ Add Quote</button>
-        <button class="opt-btn active" onclick="document.getElementById('quote-csv-input').click()" style="flex:1;text-align:center">⬆ Upload CSV</button>
-      </div>
-      <input type="file" id="quote-csv-input" accept=".csv,.txt" style="display:none" onchange="importQuoteCSV(event)">
-      <div id="quote-status" style="font-size:0.75rem;font-family:'Share Tech Mono',monospace;min-height:14px;color:var(--teal)"></div>
-    </div>
-
     <div class="modal-section">Labels (shared across habits &amp; tasks)</div>
     <div id="labels-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
     <div style="display:flex;gap:6px">
@@ -1132,12 +1109,24 @@ function showPage(id) {
 
 function toggleVacation() {
   vacation = !vacation;
-  ['vacation-btn','vacation-sidebar-btn'].forEach(id => {
-    const b = document.getElementById(id);
-    if (!b) return;
-    b.classList.toggle('vacation', vacation);
-    b.textContent = vacation ? '✓ Away' : '⛺ Away';
-  });
+  _updateVacationUI();
+  renderHabits();
+  cloudSave();
+}
+
+function _updateVacationUI() {
+  // Settings button
+  const btn = document.getElementById('vacation-settings-btn');
+  if (btn) {
+    btn.textContent = vacation ? '⛺ On' : 'Off';
+    btn.classList.toggle('active', vacation);
+  }
+  // Banner
+  const banner = document.getElementById('vacation-banner');
+  if (banner) banner.style.display = vacation ? 'block' : 'none';
+  // Sidebar button (if exists)
+  const sb = document.getElementById('vacation-sidebar-btn');
+  if (sb) { sb.classList.toggle('vacation', vacation); sb.textContent = vacation ? '✓ Away' : '⛺ Away'; }
 }
 
 // ── MODALS ────────────────────────────────────────────────
@@ -1410,6 +1399,7 @@ function renderHabits() {
 }
 
 function toggleHabit(id, sourceEl) {
+  if (vacation) { showToast('Habits paused — vacation mode is on'); return; }
   const h = habits.find(x=>x.id===id);
   if (!h) return;
   h.done = !h.done;
@@ -3031,6 +3021,7 @@ function _rebuildAll() {
   renderTasks(); renderDailyTasks(); buildCalendar();
   renderCheckinLog();
   _renderLabelFilterChips();
+  _updateVacationUI();
   renderTrends(); updateXPBar();
   _lastLevel = _calcLevel(totalXP).level;
   _initDailyReset();
@@ -3519,6 +3510,7 @@ updateXPBar();
 _lastLevel = _calcLevel(totalXP).level;
 loadTheme();
 loadTextSize();
+_updateVacationUI();
 _initDailyReset();
 renderDailyTasks();
 loadSectionStates();
