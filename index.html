@@ -196,20 +196,6 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .dtab.active{color:var(--purple);border-bottom-color:var(--purple)}
 
 /* ── GITHUB CALENDAR ── */
-.cal-wrap{overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;padding-bottom:4px}
-.cal-grid{display:grid;grid-template-rows:repeat(7,13px);grid-auto-flow:column;gap:3px;width:max-content}
-.cal-cell{width:13px;height:13px;border-radius:2px;cursor:pointer;transition:transform 0.1s;position:relative}
-.cal-cell:hover{transform:scale(1.35);z-index:10}
-.cal-cell.today{outline:1px solid var(--purple);outline-offset:1px}
-.cal-month-labels{display:flex;width:max-content;margin-bottom:4px}
-.cal-month-lbl{font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace}
-.cal-day-labels{display:grid;grid-template-rows:repeat(7,13px);gap:3px;margin-right:5px;flex-shrink:0;padding-top:20px}
-.cal-day-lbl{font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;line-height:13px}
-.cal-legend{display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:flex-end}
-.cal-legend-lbl{font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace}
-.cal-legend-cell{width:11px;height:11px;border-radius:2px}
-.cal-tooltip{position:fixed;background:var(--surf2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:0.75rem;color:var(--text);font-family:'Share Tech Mono',monospace;pointer-events:none;z-index:1000;white-space:nowrap;opacity:0;transition:opacity 0.1s}
-.cal-tooltip.show{opacity:1}
 
 /* ── TASKS ── */
 .task-section-lbl{font-size:0.6875rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 0 6px;font-family:'Share Tech Mono',monospace}
@@ -217,6 +203,9 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .task-row{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);transition:opacity 0.15s,background 0.15s}
 .drag-handle{font-size:1.125rem;color:var(--border2);cursor:grab;padding:2px 2px 0 0;flex-shrink:0;touch-action:none;user-select:none;line-height:1;letter-spacing:-1px}
 .drag-handle:active{cursor:grabbing;color:var(--purple)}
+.habit-row.missed-warning{border-left:3px solid #ef4444;background:rgba(239,68,68,0.06)}
+.habit-row.missed-warning .habit-name{color:#ef4444}
+.nmt-badge{padding:1px 7px;border-radius:10px;font-size:0.5625rem;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-family:'Share Tech Mono',monospace}
 .drag-over-top{border-top:2px solid var(--purple)!important}
 .drag-over-bottom{border-bottom:2px solid var(--purple)!important}
 .dragging{opacity:0.3}
@@ -339,10 +328,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   .modal-overlay.open .modal{transform:translateY(0)}
 
   /* slightly larger cal cells on desktop */
-  .cal-grid{grid-template-rows:repeat(7,14px);gap:3px}
-  .cal-cell{width:14px;height:14px}
-  .cal-day-labels{grid-template-rows:repeat(7,14px)}
-  .cal-day-lbl{line-height:14px}
 
   /* page title bar */
   .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
@@ -389,7 +374,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   <button onclick="continueOffline()" style="background:none;border:none;color:var(--text3);font-size:0.75rem;font-family:'Share Tech Mono',monospace;cursor:pointer;text-decoration:underline">Use without account (local only)</button>
 </div>
 <div class="scanlines"></div>
-<div class="cal-tooltip" id="cal-tooltip"></div>
 
 <div class="shell">
   <div class="topbar">
@@ -527,43 +511,15 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       </div>
 
       <div class="card">
-        <div class="card-title" style="flex-wrap:wrap;gap:8px;cursor:pointer;user-select:none" onclick="toggleSection('calendar')">
-          <span id="cal-title">// habit calendar</span>
-          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
-            <div class="sort-chip" onclick="calNav(-1)" style="padding:3px 10px;font-size:0.875rem">‹</div>
-            <div class="sort-chip active" id="cal-mode-month" onclick="calSetMode('month')">Month</div>
-            <div class="sort-chip" id="cal-mode-6mo" onclick="calSetMode('6month')">6 Months</div>
-            <div class="sort-chip" onclick="calNav(1)" style="padding:3px 10px;font-size:0.875rem">›</div>
+        <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleSection('calendar')">
+          <span>// habit calendar · 30 days</span>
+          <div style="display:flex;gap:5px;align-items:center">
             <span class="section-chevron" id="chev-calendar">▾</span>
           </div>
         </div>
-        <div id="section-calendar" style=""><div style="display:flex;gap:0">
-          <div class="cal-day-labels">
-            <div class="cal-day-lbl"></div>
-            <div class="cal-day-lbl">M</div>
-            <div class="cal-day-lbl"></div>
-            <div class="cal-day-lbl">W</div>
-            <div class="cal-day-lbl"></div>
-            <div class="cal-day-lbl">F</div>
-            <div class="cal-day-lbl"></div>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div class="cal-month-labels" id="cal-month-labels"></div>
-            <div class="cal-wrap">
-              <div class="cal-grid" id="cal-grid"></div>
-            </div>
-          </div>
+        <div id="section-calendar">
+          <div id="habit-calendar-grid" style="overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
         </div>
-        <div class="cal-legend">
-          <span class="cal-legend-lbl">Less</span>
-          <div class="cal-legend-cell" style="background:#07050f;border:1px solid var(--border)"></div>
-          <div class="cal-legend-cell" style="background:#1a1535"></div>
-          <div class="cal-legend-cell" style="background:#3d2d8a"></div>
-          <div class="cal-legend-cell" style="background:#7c5fe6"></div>
-          <div class="cal-legend-cell" style="background:#c4a8f8"></div>
-          <span class="cal-legend-lbl">More</span>
-        </div>
-        </div><!-- /section-calendar -->
       </div>
     </div>
 
@@ -1372,25 +1328,33 @@ function sortHabits(type,el) {
 }
 function getMult(c){return c>=0.9?1.5:c>=0.7?1.25:c>=0.5?1.0:0.75}
 
+function _habitMissedYesterday(h) {
+  // Returns true if habit was scheduled yesterday but not completed
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const yKey = y.toISOString().split('T')[0];
+  const yDow = (y.getDay() + 6) % 7;
+  if (!(h.days||[]).includes(yDow)) return false; // not scheduled yesterday
+  return !(h.completionLog||{})[yKey]; // scheduled but not done
+}
+
 function renderHabits() {
   const DAY_LETTERS = ['M','T','W','T','F','S','S'];
-  // Show ALL habits — greyed if not scheduled today
   let list = [...habits];
   if (_habitLabelFilter !== 'all') list = list.filter(h => h.label === _habitLabelFilter);
   if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
   else if (habitSort==='difficulty') list=[...list].sort((a,b)=>({'Easy':0,'Medium':1,'Hard':2}[b.diff]||0)-({'Easy':0,'Medium':1,'Hard':2}[a.diff]||0));
   else if (habitSort==='consistency') list=[...list].sort((a,b)=>b.consistency-a.consistency);
 
-  const todayDow = (new Date().getDay() + 6) % 7; // Mon=0
+  const todayDow = (new Date().getDay() + 6) % 7;
 
   document.getElementById('habit-list').innerHTML = list.map(h=>{
     const isActive = (h.days||[]).includes(selectedDay);
-    const isToday  = selectedDay === todayDow;
     const inactive = !isActive;
+    const missedYesterday = _habitMissedYesterday(h);
+    const isWarning = missedYesterday && !h.done && isActive; // only warn on active days and not yet done
     const diffCls = {Easy:'bd-easy',Medium:'bd-med',Hard:'bd-hard'}[h.diff];
     const dots = (h.streakData||[]).map(v=>`<div class="sdot" style="background:${v?'var(--purple2)':'var(--surf3)'};${v?'box-shadow:0 0 4px rgba(124,95,230,0.4)':''}"></div>`).join('');
 
-    // Active days display — highlight scheduled days
     const dayDots = DAY_LETTERS.map((ltr, i) => {
       const scheduled = (h.days||[]).includes(i);
       return `<span style="font-size:0.5625rem;font-family:'Share Tech Mono',monospace;color:${scheduled?'var(--purple)':'var(--surf3)'};font-weight:${scheduled?'700':'400'}">${ltr}</span>`;
@@ -1404,8 +1368,9 @@ function renderHabits() {
 
     const inactiveOverlay = inactive ? `style="opacity:0.35;pointer-events:none"` : '';
     const inactiveBadge   = inactive ? `<span class="badge" style="background:rgba(100,100,120,0.15);border-color:rgba(100,100,120,0.3);color:var(--text3);font-size:0.5625rem">off today</span>` : '';
+    const warningCls = isWarning ? ' missed-warning' : '';
 
-    return `<div class="habit-row" data-id="${h.id}" data-type="habit" draggable="true" ${inactiveOverlay}>
+    return `<div class="habit-row${warningCls}" data-id="${h.id}" data-type="habit" draggable="true" ${inactiveOverlay}>
       <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="hcheck ${inactive?'':''}${!inactive&&h.done?'done':!inactive&&h.miss==='rollover'&&h.rolloverDebt>0?'rollover':''}"
            ${inactive?'':'onclick="toggleHabit('+h.id+',this)"'}
@@ -1418,6 +1383,7 @@ function renderHabits() {
           <span class="badge ${diffCls}">${h.diff}</span>
           ${h.goal?`<span class="badge bd-goal">→ ${h.goal}</span>`:''}
           ${h.label?`<span class="badge" style="background:rgba(67,232,249,0.1);border-color:rgba(67,232,249,0.25);color:var(--cyan)">${h.label}</span>`:''}
+          ${isWarning?`<span class="nmt-badge">⚠ missed yesterday</span>`:''}
           ${inactiveBadge}
           ${!inactive?`<span class="badge ${h.miss==='rollover'?'bd-ro':'bd-rs'}">${h.miss==='rollover'?'↩ rollover':'✕ reset'}</span>`:''}
           ${!inactive?`<span class="mult-badge">${getMult(h.consistency)}×</span>`:''}
@@ -1469,145 +1435,82 @@ function toggleHabit(id, sourceEl) {
   _initAllDrag();
 }
 
-// ── CALENDAR ──────────────────────────────────────────────
-let calMode = 'month';   // 'month' | '6month'
-let calOffset = 0;       // months back from current (month mode) or 0 (6month)
 
-function calSetMode(mode) {
-  calMode = mode;
-  calOffset = 0;
-  document.getElementById('cal-mode-month').classList.toggle('active', mode==='month');
-  document.getElementById('cal-mode-6mo').classList.toggle('active', mode==='6month');
-  buildCalendar();
-}
-
-function calNav(dir) {
-  if (calMode === 'month') {
-    calOffset = Math.max(calOffset - dir, 0); // dir=1 = go forward, dir=-1 = go back
-    // Cap at 5 months back max (we only have 6 months of data max)
-    calOffset = Math.min(calOffset, 5);
-  }
-  buildCalendar();
-}
-
+// ── HABIT CALENDAR (30-day per-habit grid) ────────────────
 function buildCalendar() {
-  const today = new Date();
-  const COLORS = ['#07050f','#1a1535','#3d2d8a','#7c5fe6','#c4a8f8'];
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const el = document.getElementById('habit-calendar-grid');
+  if (!el) return;
+  const today = new Date(); today.setHours(0,0,0,0);
 
-  const grid = document.getElementById('cal-grid');
-  const monthLabels = document.getElementById('cal-month-labels');
-  const tooltip = document.getElementById('cal-tooltip');
-  grid.innerHTML = '';
-  monthLabels.innerHTML = '';
-
-  if (calMode === 'month') {
-    // Show a single calendar month
-    const viewDate = new Date(today.getFullYear(), today.getMonth() - calOffset, 1);
-    const year = viewDate.getFullYear();
-    const month = viewDate.getMonth();
-    const isCurrentMonth = (calOffset === 0);
-
-    document.getElementById('cal-title').textContent = `// ${MONTH_FULL[month]} ${year}`;
-
-    // Build 7-column grid starting from Monday of first week
-    const firstDay = new Date(year, month, 1);
-    // getDay(): 0=Sun,1=Mon...6=Sat — shift to Mon=0
-    const startDow = (firstDay.getDay() + 6) % 7;
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-    const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
-
-    // Month label (single)
-    const lbl = document.createElement('div');
-    lbl.className = 'cal-month-lbl';
-    lbl.style.width = '100%';
-    lbl.textContent = MONTH_FULL[month] + ' ' + year;
-    monthLabels.appendChild(lbl);
-
-    // Grid is 7 rows (days) × N cols (weeks) — use grid-auto-flow:column
-    // We'll generate col by col
-    const weeks = totalCells / 7;
-    for (let w = 0; w < weeks; w++) {
-      for (let d = 0; d < 7; d++) {
-        const dayNum = w * 7 + d - startDow + 1;
-        const cell = document.createElement('div');
-        cell.className = 'cal-cell';
-
-        if (dayNum < 1 || dayNum > daysInMonth) {
-          cell.style.background = 'transparent';
-          cell.style.opacity = '0';
-        } else {
-          const date = new Date(year, month, dayNum);
-          const isFuture = date > today;
-          const isToday = date.toDateString() === today.toDateString();
-          if (isToday) cell.classList.add('today');
-          const dateKey = date.toISOString().split('T')[0];
-          const level = isFuture ? -1 : (habitCompletions[dateKey] || 0);
-          cell.style.background = (isFuture || level===0) ? '#07050f' : COLORS[Math.min(level,4)];
-          if (isFuture) cell.style.opacity = '0.15';
-          const dateStr = date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-          const tip = isFuture ? dateStr+' · upcoming' : dateStr+(level===0?' · no habits':` · ${level} habit${level>1?'s':''} completed`);
-          cell.addEventListener('mouseenter', e=>{tooltip.textContent=tip;tooltip.classList.add('show');});
-          cell.addEventListener('mousemove', e=>{tooltip.style.left=Math.min(e.clientX+10,window.innerWidth-160)+'px';tooltip.style.top=(e.clientY-36)+'px';});
-          cell.addEventListener('mouseleave', ()=>tooltip.classList.remove('show'));
-        }
-        grid.appendChild(cell);
-      }
-    }
-
-    // Nav button states
-    document.querySelector('.sort-chip[onclick="calNav(1)"]').style.opacity = calOffset===0 ? '0.3' : '1';
-    document.querySelector('.sort-chip[onclick="calNav(1)"]').style.pointerEvents = calOffset===0 ? 'none' : '';
-    document.querySelector('.sort-chip[onclick="calNav(-1)"]').style.opacity = calOffset>=5 ? '0.3' : '1';
-    document.querySelector('.sort-chip[onclick="calNav(-1)"]').style.pointerEvents = calOffset>=5 ? 'none' : '';
-
-  } else {
-    // 6-month view (original behaviour)
-    document.getElementById('cal-title').textContent = '// habit calendar · 6 months';
-    const WEEKS = 26;
-    const start = new Date(today);
-    start.setDate(start.getDate() - WEEKS*7 + 1);
-    start.setDate(start.getDate() - start.getDay());
-    let lastMo = -1;
-    for (let w = 0; w < WEEKS; w++) {
-      for (let d = 0; d < 7; d++) {
-        const date = new Date(start);
-        date.setDate(start.getDate() + w*7 + d);
-        const isFuture = date > today;
-        const isToday = date.toDateString() === today.toDateString();
-        const dateKey = date.toISOString().split('T')[0];
-        const level = isFuture ? -1 : (habitCompletions[dateKey]||0);
-        const cell = document.createElement('div');
-        cell.className = 'cal-cell'+(isToday?' today':'');
-        cell.style.background = (isFuture||level===0)?'#07050f':COLORS[Math.min(level,4)];
-        if(isFuture) cell.style.opacity='0.15';
-        const dateStr = date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-        const tip = isFuture?dateStr+' · upcoming':dateStr+(level===0?' · no habits':` · ${level} habit${level>1?'s':''} completed`);
-        cell.addEventListener('mouseenter',e=>{tooltip.textContent=tip;tooltip.classList.add('show');});
-        cell.addEventListener('mousemove',e=>{tooltip.style.left=Math.min(e.clientX+10,window.innerWidth-160)+'px';tooltip.style.top=(e.clientY-36)+'px';});
-        cell.addEventListener('mouseleave',()=>tooltip.classList.remove('show'));
-        grid.appendChild(cell);
-      }
-      const d0 = new Date(start); d0.setDate(start.getDate()+w*7);
-      const mo = d0.getMonth();
-      if(mo!==lastMo && d0.getDate()<=10){
-        const lbl = document.createElement('div');
-        lbl.className='cal-month-lbl';
-        lbl.style.width='15px';
-        lbl.textContent=MONTHS[mo];
-        monthLabels.appendChild(lbl);
-        lastMo=mo;
-      } else if(w < WEEKS) {
-        const lbl = document.createElement('div');
-        lbl.className='cal-month-lbl';
-        lbl.style.width='15px';
-        monthLabels.appendChild(lbl);
-      }
-    }
-    // Hide nav buttons in 6month mode
-    document.querySelectorAll('.sort-chip[onclick^="calNav"]').forEach(b=>{b.style.opacity='0.3';b.style.pointerEvents='none';});
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    days.push({ date: d, key: d.toISOString().split('T')[0], dow: (d.getDay()+6)%7 });
   }
+
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAY_ABBR = ['M','T','W','T','F','S','S'];
+
+  let hList = [...habits];
+  if (_habitLabelFilter !== 'all') hList = hList.filter(h => h.label === _habitLabelFilter);
+
+  if (!hList.length) {
+    el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">Add habits to see the calendar</div>';
+    return;
+  }
+
+  // Header row
+  let headerHtml = '<div style="position:sticky;left:0;z-index:2;min-width:100px;background:var(--bg2);padding:4px 8px;border-bottom:1px solid var(--border)"></div>';
+  headerHtml += days.map((d, i) => {
+    const isToday = i === 29;
+    const dayNum  = d.date.getDate();
+    const showMonth = (i === 0 || dayNum === 1);
+    return `<div style="text-align:center;padding:2px 0;min-width:24px;border-bottom:1px solid var(--border);${isToday?'background:rgba(157,127,245,0.12);border-radius:6px 6px 0 0':''}">
+      ${showMonth?`<div style="font-size:0.375rem;color:var(--purple);font-family:'Share Tech Mono',monospace;white-space:nowrap">${MONTHS_SHORT[d.date.getMonth()]}</div>`:`<div style="font-size:0.375rem">&nbsp;</div>`}
+      <div style="font-size:0.5rem;color:${isToday?'var(--purple)':'var(--text3)'};font-family:'Share Tech Mono',monospace;font-weight:${isToday?'700':'400'}">${dayNum}</div>
+      <div style="font-size:0.375rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${DAY_ABBR[d.dow]}</div>
+    </div>`;
+  }).join('');
+
+  // Habit rows
+  let bodyHtml = '';
+  hList.forEach(h => {
+    let rowHtml = `<div style="position:sticky;left:0;z-index:2;min-width:100px;background:var(--bg2);padding:5px 8px;font-size:0.625rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center">${h.name}</div>`;
+    rowHtml += days.map((d, i) => {
+      const scheduled = (h.days||[]).includes(d.dow);
+      const isToday = i === 29;
+      const done = isToday ? h.done : !!(h.completionLog||{})[d.key];
+      let bg, symbol, textCol;
+      if (!scheduled) {
+        bg = 'transparent'; symbol = '—'; textCol = 'var(--surf3)';
+      } else if (done) {
+        bg = 'rgba(34,197,94,0.12)'; symbol = '✓'; textCol = '#22c55e';
+      } else {
+        const isPast = d.date < today;
+        if (isPast) {
+          bg = 'rgba(239,68,68,0.08)'; symbol = '✗'; textCol = '#ef4444';
+        } else {
+          bg = 'transparent'; symbol = '·'; textCol = 'var(--surf3)';
+        }
+      }
+      return `<div style="text-align:center;padding:4px 0;min-width:24px;font-size:0.625rem;color:${textCol};background:${bg};font-family:'Share Tech Mono',monospace;border-bottom:1px solid var(--border);${isToday?'background:rgba(157,127,245,0.06)':''}">${symbol}</div>`;
+    }).join('');
+    bodyHtml += rowHtml;
+  });
+
+  const legendHtml = `<div style="display:flex;gap:14px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:0.625rem;font-family:'Share Tech Mono',monospace;color:var(--text3)">
+    <span><span style="color:#22c55e">✓</span> done</span>
+    <span><span style="color:#ef4444">✗</span> missed</span>
+    <span><span style="color:var(--surf3)">—</span> not scheduled</span>
+  </div>`;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:auto repeat(30,1fr);gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg2)">
+      ${headerHtml}
+      ${bodyHtml}
+    </div>
+    ${legendHtml}
+  `;
 }
 
 // ── HABIT STREAKS ─────────────────────────────────────────
@@ -2787,6 +2690,7 @@ function _refreshXPBar() {
   if (info.level > _lastLevel) {
     _showLevelUp(info.level);
     _lastLevel = info.level;
+    cloudSave(); // persist immediately so other devices don't re-fire the popup
   }
 }
 
@@ -2999,6 +2903,7 @@ function _doCloudSave() {
   const raw = {
     goals, habits, tasks, quotes,
     labels, totalXP,
+    lastSeenLevel: _lastLevel,
     energyFactors, energyCheckins, checkinState,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
@@ -3042,6 +2947,8 @@ function _loadFromCloud(uid) {
         quotes           = d.quotes           ?? [];
         labels           = Array.isArray(d.labels) ? d.labels : labels;
         if (d.totalXP !== undefined) totalXP = d.totalXP;
+        // Restore lastSeenLevel so level-up popup doesn't re-fire on other devices
+        if (d.lastSeenLevel !== undefined) _lastLevel = d.lastSeenLevel;
         energyCheckins   = Array.isArray(d.energyCheckins) ? d.energyCheckins : [];
         // Handle legacy energyFactors (strings) vs new schema (objects)
         if (Array.isArray(d.energyFactors) && d.energyFactors.length > 0) {
