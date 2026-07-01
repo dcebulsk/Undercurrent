@@ -3600,11 +3600,10 @@ async function _callSignal(messages, snapshot) {
     }
     const text = data.content?.map(c=>c.text||'').join('')||'No response';
     _addSignalMessage('assistant', text);
-    // Show input for conversation
-    if (_signalCurrentType === 'evening') {
-      document.getElementById('signal-input-area').style.display = 'block';
-      document.getElementById('signal-input').placeholder = 'Share your reflection…';
-    }
+    // Show input for conversation — always allow replies
+    document.getElementById('signal-input-area').style.display = 'block';
+    document.getElementById('signal-input').placeholder = _signalCurrentType === 'evening' ? 'Share your reflection…' : 'Reply to Signal…';
+    document.getElementById('signal-input').focus();
     // Save conversation
     _saveSignalConversation();
   } catch(err) {
