@@ -648,6 +648,17 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       </div>
     </div>
 
+    <!-- REVIEW -->
+    <div class="page" id="page-review">
+      <div class="card card-accent">
+        <div class="card-title">// review</div>
+        <div id="review-content"></div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+  </div><!-- end body-wrap -->
+
     <!-- ENERGY CHECK-IN MODAL -->
     <div class="modal-overlay" id="modal-checkin">
       <div class="modal">
@@ -663,17 +674,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <button class="modal-save" onclick="saveCheckinNew()">Save Check-in</button>
       </div>
     </div>
-
-    <!-- REVIEW -->
-    <div class="page" id="page-review">
-      <div class="card card-accent">
-        <div class="card-title">// review</div>
-        <div id="review-content"></div>
-      </div>
-    </div>
-
-  </div><!-- end content -->
-  </div><!-- end body-wrap -->
 
     <!-- SIGNAL AI PANEL -->
     <div id="signal-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,5,15,0.88);z-index:600;align-items:center;justify-content:center">
@@ -1829,7 +1829,7 @@ function renderDailyTasks() {
   const midnight = new Date(); midnight.setHours(24,0,0,0);
   const hrs = Math.floor((midnight - now) / 3600000);
   const mins = Math.floor(((midnight - now) % 3600000) / 60000);
-  document.getElementById('daily-reset-lbl').textContent =
+  const _drl = document.getElementById('daily-reset-lbl'); if (_drl) _drl.textContent =
     `resets in ${hrs}h ${mins}m`;
 }
 
@@ -2253,6 +2253,7 @@ function renderTrends(){}
 // ── QUOTES ────────────────────────────────────────────────
 function _renderQuoteBanner() {
   const banner = document.getElementById('quote-banner');
+  if (!banner) return; // quotes UI removed
   if (!quotes.length) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
   const q = quotes[quoteIndex % quotes.length];
@@ -2524,18 +2525,25 @@ function prepSettingsModal() {
 
 function _renderSettingsFactors() {
   const grid = document.getElementById('settings-factors');
-  grid.innerHTML = energyFactors.map(f => `
-    <div style="display:inline-flex;align-items:center;gap:4px;background:rgba(157,127,245,0.1);border:1px solid rgba(157,127,245,0.25);border-radius:16px;padding:4px 8px 4px 10px;margin:2px">
-      <span style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace">${f}</span>
-      <span onclick="removeFactor('${f}')" style="font-size:0.875rem;color:var(--text3);cursor:pointer;line-height:1;padding-left:2px" title="Remove">×</span>
-    </div>`).join('');
+  if (!grid) return;
+  grid.innerHTML = energyFactors.map(f => {
+    const name = typeof f === 'string' ? f : f.name;
+    const typeCol = typeof f === 'object' ? (f.type==='positive'?'#22c55e':f.type==='negative'?'#ef4444':'#8888aa') : 'var(--purple)';
+    const adIcon = typeof f === 'object' && f.allDay ? ' 📌' : '';
+    return `<div style="display:inline-flex;align-items:center;gap:4px;background:${typeCol}15;border:1px solid ${typeCol}40;border-radius:16px;padding:4px 8px 4px 10px;margin:2px">
+      <span style="font-size:0.75rem;color:${typeCol};font-family:'Share Tech Mono',monospace">${name}${adIcon}</span>
+      <span onclick="removeFactor('${name}')" style="font-size:0.875rem;color:var(--text3);cursor:pointer;line-height:1;padding-left:2px" title="Remove">×</span>
+    </div>`;
+  }).join('');
 }
 
 function removeFactor(name) {
-  energyFactors = energyFactors.filter(f => f !== name);
+  energyFactors = energyFactors.filter(f => {
+    const n = typeof f === 'string' ? f : f.name;
+    return n !== name;
+  });
   _renderSettingsFactors();
-  renderFactors('factors-morning', 'morning');
-  renderFactors('factors-afternoon', 'afternoon');
+  cloudSave();
 }
 
 function toggleSettingsFactor(el, name) {
@@ -2544,13 +2552,15 @@ function toggleSettingsFactor(el, name) {
 
 function addFactor() {
   const inp = document.getElementById('new-factor-input');
+  if (!inp) return;
   const val = inp.value.trim();
-  if (!val || energyFactors.includes(val)) return;
-  energyFactors.push(val);
+  if (!val) return;
+  const exists = energyFactors.some(f => (typeof f === 'string' ? f : f.name) === val);
+  if (exists) return;
+  energyFactors.push({name: val, type: 'neutral', allDay: false});
   inp.value = '';
   _renderSettingsFactors();
-  renderFactors('factors-morning', 'morning');
-  renderFactors('factors-afternoon', 'afternoon');
+  cloudSave();
 }
 
 // ── GOAL DROPDOWN BUILDER ─────────────────────────────────
