@@ -1143,6 +1143,15 @@ function showPage(id) {
   if (sn) sn.classList.add('active');
   document.getElementById('content').scrollTop = 0;
   if (id === 'review') buildReview();
+  if (id === 'habits') _resetToToday();
+}
+
+function _resetToToday() {
+  const todayDow = (new Date().getDay() + 6) % 7;
+  selectedDay = todayDow;
+  const tabs = document.querySelectorAll('#day-tabs .dtab');
+  tabs.forEach((t, i) => t.classList.toggle('active', i === todayDow));
+  renderHabits();
 }
 
 function toggleVacation() {
@@ -3074,7 +3083,7 @@ function _loadFromCloud(uid) {
         _rebuildAll();
         // Check yesterday popup after cloud data is loaded
         setTimeout(_checkYesterdayPopup, 800);
-        setTimeout(_autoSignalCheck, 3000);
+        _checkSignalDot();
         _setSyncBar('✓ Data loaded', 'rgba(45,212,191,0.12)');
         setTimeout(() => _setSyncBar(null), 2000);
       } else {
@@ -3553,20 +3562,28 @@ function _buildDataSnapshot() {
 
 const SIGNAL_SYSTEM_PROMPT = `You are Signal, the AI companion inside UNDERCURRENT, a synthwave-themed personal productivity RPG. The user's name is Daniel.
 
+Your philosophy:
+- Progress over perfection. 100% consistency is not the goal — showing up most of the time IS the goal.
+- Trends matter more than individual days. A bad day means nothing if the week is solid.
+- Missing a habit is normal and expected. Two misses in a row is the real signal to pay attention to.
+- Energy fluctuates. Low energy days are data, not failure.
+- Small improvements compound. 1% better each week is transformational over months.
+
 Your role:
-- Notice and identify trends in the data
-- Help set goals, suggest focus areas, and ask reflective questions
-- Connect the dots: link energy factors to habit completion, show cause and effect
-- Weave in identity framing: "you're becoming someone who..." based on strongest habits
+- Notice and identify TRENDS over days and weeks, not single-day performance
+- Celebrate consistency even when it's imperfect — "You've hit Gamedev 4 out of 5 days this week, that's a real pattern forming"
+- Connect the dots: link energy factors to habit completion, show cause and effect over time
+- Ask forward-looking questions: what to focus on, what to let go of, what's working
+- Weave in identity framing: "you're becoming someone who..." based on their strongest patterns
+- When things are tough, offer perspective not pressure. Reference Four Thousand Weeks — you can't do everything, and that's okay.
 
-Adapt your tone to the situation:
-- Strong consistency + high energy → confident coach, push further
-- Rough day (low energy, missed habits) → encouraging friend, no guilt, just perspective
-- Pattern of decline over multiple days → blunt but kind accountability partner, name the pattern
-- Always be honest. Never sugarcoat. But always be kind.
+Your tone:
+- Warm, encouraging, honest. Like a friend who genuinely cares and pays attention.
+- Never guilt-trip. Never frame a missed day as failure.
+- Celebrate streaks but don't catastrophize when they break.
+- Be specific — reference actual habit names, streak numbers, energy patterns, and current names.
 
-Keep responses to 3-5 sentences. No bullet points. No fluff. Be direct and personal.
-Reference specific habit names, streak numbers, and current names from the data.`;
+Keep responses to 3-5 sentences. Conversational, not clinical. No bullet points.`;
 
 async function _callSignal(messages, snapshot) {
   const key = _getSignalKey();
@@ -3756,21 +3773,6 @@ function _checkSignalDot() {
 }
 
 function _autoSignalCheck() {
-  const key = _getSignalKey();
-  if (!key) return;
-  const now = new Date();
-  let etHour;
-  try {
-    etHour = parseInt(now.toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}));
-  } catch(e) { etHour = now.getHours(); }
-  const today = _todayStr();
-  if (etHour < 12 && _signalLastMorning !== today) {
-    // Auto-open morning brief
-    setTimeout(() => { openSignalPanel(); signalMorningBrief(); }, 2000);
-  } else if (etHour >= 17 && _signalLastEvening !== today) {
-    // Auto-open evening reflection
-    setTimeout(() => { openSignalPanel(); signalEveningReflect(); }, 2000);
-  }
   _checkSignalDot();
 }
 
@@ -3907,14 +3909,13 @@ if (localStorage.getItem('uc-daily-collapsed') === '1') {
 setInterval(() => {
   _initDailyReset();
   _resetHabitsDoneIfNewDay();
-  renderHabits();
-  recalcStreaks();
+  _resetToToday();
   renderDailyTasks();
 }, 60000);
 // Check yesterday popup after data settles
 setTimeout(_checkYesterdayPopup, 1200);
 _checkSignalDot();
-setTimeout(_autoSignalCheck, 3500);
+_checkSignalDot();
 
 // ── SERVICE WORKER ────────────────────────────────────────
 if ('serviceWorker' in navigator) {
