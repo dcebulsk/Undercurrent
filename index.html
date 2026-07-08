@@ -587,6 +587,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
             <div id="pom-session-counter" style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-bottom:14px;display:none">Session <span id="pom-session-num">0/1</span> · <span id="pom-total-time">0</span> min total</div>
             <div style="display:flex;gap:10px" id="pom-main-btns">
               <button class="btn btn-p" id="pom-btn" onclick="togglePom()">Start</button>
+              <button class="btn btn-g" id="pom-end-early-btn" onclick="endPomEarly()" style="display:none">⏹ End Early</button>
               <button class="btn btn-g" onclick="resetPom()">Reset</button>
             </div>
             <div id="pom-end-btns" style="display:none;flex-direction:column;align-items:center;gap:8px;width:100%">
@@ -1653,8 +1654,12 @@ function prepTaskModal(id) {
   buildGoalDropdown('task-goal-link', t ? t.goal : '');
   document.getElementById('task-delete-btn').style.display = t ? 'block' : 'none';
   const today = new Date();
-  const due = t ? new Date(today.getTime() + (t.daysUntilDue??0)*86400000) : today;
-  document.getElementById('task-due-input').value = due.toISOString().split('T')[0];
+  if (t) {
+    const due = new Date(today.getTime() + (t.daysUntilDue??0)*86400000);
+    document.getElementById('task-due-input').value = due.toISOString().split('T')[0];
+  } else {
+    document.getElementById('task-due-input').value = '';
+  }
   document.querySelectorAll('#modal-add-task .opt-btn').forEach(b=>{
     if (['High','Medium','Low'].includes(b.textContent)) {
       const map = {High:'high',Medium:'med',Low:'low'};
@@ -2032,18 +2037,21 @@ function saveFocus() {
 // ── Timer core ────────────────────────────────────────────
 function togglePom() {
   const btn = document.getElementById('pom-btn');
+  const earlyBtn = document.getElementById('pom-end-early-btn');
   if (!pomRunning) {
     pomRunning = true;
     btn.textContent = 'Pause';
     btn.style.background = pomIsBreak
       ? 'linear-gradient(135deg,#0f766e,#2dd4bf)'
       : 'linear-gradient(135deg,#be185d,#f06db0)';
+    if (!pomIsBreak && earlyBtn) earlyBtn.style.display = '';
     pomInt = setInterval(_pomTick, 1000);
   } else {
     clearInterval(pomInt);
     pomRunning = false;
     btn.textContent = 'Resume';
     btn.style.background = '';
+    if (earlyBtn) earlyBtn.style.display = 'none';
   }
 }
 
@@ -2068,6 +2076,8 @@ function _pomRefreshDisplay() {
 
 function _onFocusComplete() {
   playPomoSound();
+  const earlyBtn = document.getElementById('pom-end-early-btn');
+  if (earlyBtn) earlyBtn.style.display = 'none';
   pomSessionNum++;
   const mins = Math.round(pomFocusSecs / 60);
   pomTotalMins += mins;
@@ -2078,16 +2088,13 @@ function _onFocusComplete() {
   document.getElementById('pom-total-time').textContent = pomTotalMins;
 
   if (pomSessionNum >= pomPlanned) {
-    // All sessions done
     document.getElementById('pom-phase').textContent = 'done ✓';
     document.getElementById('pom-end-msg').textContent = `All ${pomPlanned} session${pomPlanned>1?'s':''} complete!`;
     document.getElementById('pom-main-btns').style.display = 'none';
     document.getElementById('pom-end-btns').style.display = 'flex';
-    // Hide break button since we're done
     document.getElementById('pom-start-break-btn').style.display = 'none';
     document.getElementById('pom-skip-break-btn').style.display = 'none';
   } else if (pomBreakSecs > 0) {
-    // More sessions to go, show break options
     const breakMins = Math.round(pomBreakSecs / 60);
     document.getElementById('pom-phase').textContent = 'break?';
     document.getElementById('pom-end-msg').textContent =
@@ -2097,7 +2104,6 @@ function _onFocusComplete() {
     document.getElementById('pom-start-break-btn').style.display = 'inline-flex';
     document.getElementById('pom-skip-break-btn').style.display = 'inline-flex';
   } else {
-    // No break configured — start next session immediately after a beat
     document.getElementById('pom-phase').textContent = 'next →';
     document.getElementById('pom-end-msg').textContent =
       `Session ${pomSessionNum}/${pomPlanned} done`;
@@ -2108,6 +2114,53 @@ function _onFocusComplete() {
     document.getElementById('pom-skip-break-btn').style.display = 'inline-flex';
   }
   document.getElementById('pom-btn').style.background = '';
+}
+
+function endPomEarly() {
+  if (!pomRunning || pomIsBreak) return;
+  clearInterval(pomInt);
+  pomRunning = false;
+  const earlyBtn = document.getElementById('pom-end-early-btn');
+  if (earlyBtn) earlyBtn.style.display = 'none';
+
+  const elapsed = pomDuration - pomVal;
+  const elapsedMins = Math.max(1, Math.round(elapsed / 60));
+  const proportion = elapsed / pomDuration;
+  const pctDone = Math.round(proportion * 100);
+
+  pomSessionNum++;
+  pomTotalMins += elapsedMins;
+  _addSessionToLog(pomCurrentTask, pomCurrentGoal, elapsedMins);
+
+  document.getElementById('pom-session-counter').style.display = 'block';
+  document.getElementById('pom-session-num').textContent = `${pomSessionNum} / ${pomPlanned}`;
+  document.getElementById('pom-total-time').textContent = pomTotalMins;
+  document.getElementById('pom-phase').textContent = `ended early (${pctDone}%)`;
+  document.getElementById('pom-btn').textContent = 'Start';
+  document.getElementById('pom-btn').style.background = '';
+
+  showToast(`Session ended early — ${elapsedMins} min logged`);
+
+  if (pomSessionNum >= pomPlanned) {
+    document.getElementById('pom-end-msg').textContent = `All ${pomPlanned} session${pomPlanned>1?'s':''} complete!`;
+    document.getElementById('pom-main-btns').style.display = 'none';
+    document.getElementById('pom-end-btns').style.display = 'flex';
+    document.getElementById('pom-start-break-btn').style.display = 'none';
+    document.getElementById('pom-skip-break-btn').style.display = 'none';
+  } else {
+    pomVal = pomFocusSecs;
+    pomDuration = pomFocusSecs;
+    _pomRefreshDisplay();
+    if (pomBreakSecs > 0) {
+      document.getElementById('pom-main-btns').style.display = 'none';
+      document.getElementById('pom-end-btns').style.display = 'flex';
+      document.getElementById('pom-end-msg').textContent = `Session ${pomSessionNum} ended early. Take a break?`;
+      document.getElementById('pom-start-break-btn').style.display = '';
+      document.getElementById('pom-skip-break-btn').textContent = '▶ Skip to Next';
+      document.getElementById('pom-skip-break-btn').style.display = '';
+    }
+  }
+  cloudSave();
 }
 
 function _onBreakComplete() {
