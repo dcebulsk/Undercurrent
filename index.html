@@ -3576,224 +3576,298 @@ function _initAllDrag() {
 }
 
 // ── POSTURE / THORACIC KYPHOSIS ───────────────────────────
-// type: 'reps' (count) | 'hold' (seconds) | 'breath' (breath cycles)
+// Protocols drawn from published RCTs. sets x reps, rest in seconds.
+// type: 'reps' | 'hold' (seconds) | 'breath' (cycles)
 const PX_EXERCISES = {
-  foam_ext: { name:'Foam Roller Thoracic Extension', type:'reps', reps:10, cue:'Roller across mid-back, knees bent, hands supporting head. Arch back over the roller, hold 2s, return. Move roller up/down to find stiff segments.', focus:'Mobility', kit:'Foam roller' },
-  foam_angel: { name:'Foam Roller Snow Angels', type:'breath', reps:8, cue:'Lie lengthwise along the roller, head to tailbone supported. Arms out in a T, sweep overhead slowly. One rep per slow breath.', focus:'Mobility', kit:'Foam roller' },
-  cat_cow: { name:'Cat–Cow (Cow Emphasis)', type:'reps', reps:12, cue:'Tabletop position. Inhale into cow — drop belly, lift chest and tailbone. Exhale to cat. Spend extra time in cow.', focus:'Mobility', kit:'None' },
-  quad_rot: { name:'Quadruped Thoracic Rotation', type:'reps', reps:10, cue:'Hand behind head, rotate elbow up toward ceiling, follow with your eyes. 10 each side. Keep hips square.', focus:'Mobility', kit:'None' },
-  doorway: { name:'Doorway Pec Stretch', type:'hold', reps:30, cue:'Forearms on the frame at 90°, step through gently. Hold and breathe. Repeat at low, mid, and high arm angles.', focus:'Stretch', kit:'Doorway' },
-  lat_stretch: { name:'Static Lat Stretch', type:'hold', reps:30, cue:'On all fours, one forearm on a ball or chair, sink hips back. Tight lats pull shoulders forward and worsen the curve.', focus:'Stretch', kit:'Ball or chair' },
-  cobra: { name:'Prone Cobra', type:'reps', reps:10, cue:'Face-down, arms at sides, palms down. Squeeze glutes. Lift head, chest and arms, thumbs to ceiling, squeeze shoulder blades. Hold 3–5s at the top, lower over 3s.', focus:'Strength', kit:'None', star:true },
-  wall_angel: { name:'Wall Angels', type:'reps', reps:10, cue:'Back to wall, arms in a W. Slide arms overhead keeping elbows and wrists on the wall. Ribs down, no low-back arch.', focus:'Strength', kit:'Wall' },
-  yti: { name:'Prone Y-T-I Raises', type:'reps', reps:8, cue:'Face-down. Arms in a Y, lift and lower. Then T. Then I. 8 reps of each shape. Thumbs up throughout.', focus:'Strength', kit:'None' },
-  prone_elbow: { name:'Prone Elbow Lifts', type:'reps', reps:12, cue:'Face-down, hands behind head, elbows wide. Lift elbows toward ceiling, squeezing between the shoulder blades. Head stays neutral.', focus:'Strength', kit:'None' },
-  brugger: { name:"Brügger's Relief Position", type:'hold', reps:20, cue:'Sit at the edge of a chair. Arms down and out, palms forward, thumbs back. Lift the sternum, roll shoulders back and down. Breathe.', focus:'Strength', kit:'Chair' },
-  band_pull: { name:'Band Pull-Apart', type:'reps', reps:15, cue:'Band at chest height, arms straight. Pull apart, squeezing shoulder blades. Slow return. Keep ribs down.', focus:'Strength', kit:'Resistance band' },
-  sternum_lift: { name:'Standing Sternum Lift', type:'reps', reps:10, cue:'Thumbs under armpits, fingers up. Lift thumbs as high as you can — this extends the thoracic spine and lifts the sternum. Hold 3s.', focus:'Desk break', kit:'None' },
-  breath_3d: { name:'3D Rotational Breathing', type:'breath', reps:10, cue:'Seated tall. Breathe wide into the back and sides of the ribcage, not the belly. Exhale slowly. Schroth-style expansion into the flattened area.', focus:'Breathing', kit:'None' },
-  dead_hang: { name:'Dead Hang', type:'hold', reps:30, cue:'Passive hang from a bar. Let the spine decompress. Relax the shoulders and just breathe.', focus:'Mobility', kit:'Pull-up bar' },
-  superman: { name:'Superman Hold', type:'hold', reps:15, cue:'Face-down, arms forward. Lift arms, chest and legs. Only until you feel the mid-back working — do not crank the low back.', focus:'Strength', kit:'None' },
+  // ---- SHEAF / Katzman spine-strengthening core four ----
+  birddog:   { name:'Quadruped Arm & Leg Lift', sets:2, reps:8, type:'reps', rest:60, tempo:'2s up · 2s hold · 3s down',
+    cue:'Tabletop. Extend opposite arm and leg to horizontal, ribs down, hips level. 8 each side per set. Work to momentary fatigue at rep 8 — add a light ankle/wrist weight once that gets easy.', focus:'Strength', kit:'None' },
+  prone_trunk:{ name:'Prone Trunk Lift', sets:2, reps:8, type:'reps', rest:60, tempo:'2s up · 3s hold · 3s down',
+    cue:'Face-down, hands at temples or by your sides. Squeeze glutes, lift chest and head as one unit. Lift from the mid-back, not the low back. Should feel "somewhat hard" to "hard" by rep 8.', focus:'Strength', kit:'None', star:true },
+  side_rot:  { name:'Side-Lying Thoracic Rotation', sets:2, reps:8, type:'reps', rest:45, tempo:'slow, end-range',
+    cue:'On your side, knees at 90°, arms stacked forward. Sweep the top arm open into a book, following with your eyes. Push into end range. 8 each side per set.', focus:'Mobility', kit:'None' },
+  side_leg:  { name:'Side-Lying Leg Lift', sets:2, reps:8, type:'reps', rest:45, tempo:'2s up · 2s down',
+    cue:'On your side, body in one straight line. Lift the top leg. Trunk stabiliser work — keeps the spine neutral under load. 8 each side per set.', focus:'Strength', kit:'None' },
+
+  // ---- Mobility ----
+  foam_ext:  { name:'Foam Roller Thoracic Extension', sets:2, reps:10, type:'reps', rest:30, tempo:'hold 2–3s at end range',
+    cue:'Roller across the mid-back, knees bent, hands supporting the head. Arch back over it, hold, return. Move the roller up and down to hunt for the stiff segments. Melt into it — do not force.', focus:'Mobility', kit:'Foam roller' },
+  foam_angel:{ name:'Foam Roller Snow Angels', sets:2, reps:8, type:'breath', rest:30, tempo:'one rep per slow breath',
+    cue:'Lie lengthwise along the roller, head to tailbone supported. Arms out in a T, sweep overhead slowly. Let gravity open the chest.', focus:'Mobility', kit:'Foam roller' },
+  cat_cow:   { name:'Cat–Cow (Cow Emphasis)', sets:2, reps:10, type:'reps', rest:20, tempo:'slow, breath-led',
+    cue:'Tabletop. Inhale into cow — drop the belly, lift chest and tailbone. Exhale to cat. Spend extra time in cow; that is the direction you need.', focus:'Mobility', kit:'None' },
+  quad_rot:  { name:'Quadruped Thoracic Rotation', sets:2, reps:10, type:'reps', rest:30, tempo:'2s up · 1s hold',
+    cue:'Hand behind head, rotate the elbow up toward the ceiling, eyes following. Hips stay square — the movement comes from the mid-back. 10 each side per set.', focus:'Mobility', kit:'None' },
+  standing_ext:{ name:'Standing End-Range Extension', sets:2, reps:10, type:'reps', rest:30, tempo:'2s hold at top',
+    cue:'Hands on the lower ribs or behind the head. Lift the sternum and extend back over your hands. Stop at the mid-back — do not hinge at the low back.', focus:'Mobility', kit:'None' },
+  dead_hang: { name:'Dead Hang', sets:2, reps:30, type:'hold', rest:60, tempo:'relax and breathe',
+    cue:'Passive hang from a bar. Let the spine decompress, shoulders relaxed up by the ears. Just breathe.', focus:'Mobility', kit:'Pull-up bar' },
+
+  // ---- Stretch ----
+  doorway:   { name:'Doorway Pec Stretch', sets:3, reps:30, type:'hold', rest:15, tempo:'3 arm heights',
+    cue:'Forearms on the frame at 90°, step through gently. Do one set at low, one at mid, one at high arm angle to hit all fibre directions.', focus:'Stretch', kit:'Doorway' },
+  lat_stretch:{ name:'Static Lat Stretch', sets:2, reps:30, type:'hold', rest:15, tempo:'30s each side',
+    cue:'On all fours, one forearm on a ball or chair, sink the hips back. Tight lats pull the shoulders forward and drive the curve.', focus:'Stretch', kit:'Ball or chair' },
+
+  // ---- Scapular / band ----
+  dynamic_hug:{ name:'Dynamic Hug', sets:3, reps:12, type:'reps', rest:45, tempo:'2s out · 2s in',
+    cue:'Elbows bent 45°, arms abducted 60°, shoulders internally rotated. Sweep the hands together in an arc until they touch, then return slowly. Serratus anterior — the muscle that sets the scapula.', focus:'Strength', kit:'Band optional' },
+  band_pull: { name:'Band Pull-Apart', sets:3, reps:15, type:'reps', rest:45, tempo:'2s out · 3s return',
+    cue:'Band at chest height, arms straight. Pull apart, squeezing the shoulder blades together. Slow eccentric. Ribs stay down.', focus:'Strength', kit:'Resistance band' },
+  wall_angel:{ name:'Wall Angels', sets:2, reps:10, type:'reps', rest:45, tempo:'3s up · 3s down',
+    cue:'Back to wall, arms in a W. Slide overhead keeping elbows and wrists in contact. Ribs down — no low-back arch. If contact breaks, shorten the range.', focus:'Strength', kit:'Wall' },
+  yti:       { name:'Prone Y-T-I Raises', sets:2, reps:8, type:'reps', rest:60, tempo:'2s up · 2s hold · 2s down',
+    cue:'Face-down, thumbs up throughout. 8 reps in the Y shape, then 8 in T, then 8 in I. That whole sequence is one set.', focus:'Strength', kit:'None' },
+  prone_elbow:{ name:'Prone Elbow Lifts', sets:2, reps:12, type:'reps', rest:45, tempo:'2s up · 2s hold',
+    cue:'Face-down, hands behind the head, elbows wide. Lift the elbows toward the ceiling, squeezing between the shoulder blades. Head stays neutral.', focus:'Strength', kit:'None' },
+  cobra:     { name:'Prone Cobra', sets:2, reps:10, type:'reps', rest:60, tempo:'3–5s hold · 3s down',
+    cue:'Face-down, arms at sides, palms down. Squeeze glutes to lock the pelvis. Lift head, chest and arms, rotating the thumbs to the ceiling. Squeeze the shoulder blades, hold 3–5s, lower over 3s.', focus:'Strength', kit:'None', star:true },
+  superman:  { name:'Superman Hold', sets:2, reps:15, type:'hold', rest:60, tempo:'hold, breathe normally',
+    cue:'Face-down, arms forward. Lift arms, chest and legs. Only to the point where the mid-back is working — do not crank the low back.', focus:'Strength', kit:'None' },
+
+  // ---- Alignment / breathing / desk ----
+  brugger:   { name:"Brügger's Relief Position", sets:3, reps:20, type:'hold', rest:15, tempo:'hold and breathe',
+    cue:'Sit at the edge of a chair. Arms down and slightly out, palms forward, thumbs back. Lift the sternum, roll the shoulders back and down.', focus:'Alignment', kit:'Chair' },
+  sternum_lift:{ name:'Standing Sternum Lift', sets:2, reps:10, type:'reps', rest:20, tempo:'3s hold',
+    cue:'Thumbs under the armpits, fingers pointing up. Lift the thumbs as high as you can — this extends the thoracic spine and lifts the sternum. Hold 3s.', focus:'Alignment', kit:'None' },
+  breath_3d: { name:'3D Rotational Breathing', sets:2, reps:10, type:'breath', rest:20, tempo:'4s in · 6s out',
+    cue:'Sit tall. Breathe wide into the back and sides of the ribcage, not the belly. Schroth principle — expand air into the flattened region to push the curve open from the inside.', focus:'Breathing', kit:'None' },
+  posture_hold:{ name:'Neutral Alignment Hold', sets:3, reps:30, type:'hold', rest:15, tempo:'find it, then keep it',
+    cue:'Stand against a wall: heels, buttocks, shoulder blades and head in contact. Memorise this. Step away and hold the same shape. This is the position you carry into the rest of the day.', focus:'Alignment', kit:'Wall' },
 };
 
 const PX_ROUTINES = [
-  { id:'daily',    name:'Daily Reset',      mins:6,  desc:'Short enough to actually do every day. Mobility + the key strength move.',
+  { id:'sheaf', name:'SHEAF Spine Strengthening', mins:35, freq:'3× per week', weeks:'6 months',
+    src:'Katzman et al., Phys Ther 2016 — the most rigorously tested kyphosis protocol',
+    desc:'The full multimodal programme: strengthening, mobility and alignment. 2 sets to momentary fatigue at rep 8.',
+    ex:['cat_cow','foam_ext','birddog','prone_trunk','side_rot','side_leg','standing_ext','posture_hold'] },
+
+  { id:'mobilise', name:'Thoracic Mobilisation', mins:16, freq:'3 days per week', weeks:'4 weeks',
+    src:'Ersin & Kaya, Turk J Med Sci 2023 — 2 sets × 10 reps home programme',
+    desc:'Pure mobility. Loosens the stiff segments so the strength work has range to work into.',
+    ex:['cat_cow','foam_ext','foam_angel','quad_rot','standing_ext','lat_stretch'] },
+
+  { id:'scapular', name:'Scapular & Chest', mins:20, freq:'3× per week', weeks:'10 weeks',
+    src:'Moustafa et al., J Clin Med 2022 — 3 sets × 12 dynamic hug protocol',
+    desc:'Targets the shoulder-girdle side of the problem: tight pecs, weak serratus and mid-traps.',
+    ex:['doorway','lat_stretch','dynamic_hug','band_pull','wall_angel','prone_elbow'] },
+
+  { id:'schroth', name:'Corrective & Breathing', mins:22, freq:'3× per week', weeks:'8 weeks',
+    src:'Schroth-based 3D protocol — strongest evidence class per Physiopedia 2025',
+    desc:'Three-dimensional correction with rotational breathing. Slower, more precise, more mental.',
+    ex:['breath_3d','foam_ext','quad_rot','side_rot','cobra','wall_angel','posture_hold'] },
+
+  { id:'daily', name:'Daily Reset', mins:9, freq:'daily', weeks:'ongoing',
+    src:'Condensed — the minimum effective dose',
+    desc:'Short enough that you will actually do it every day. Mobility plus the single best strength move.',
     ex:['cat_cow','foam_ext','cobra','sternum_lift'] },
-  { id:'full',     name:'Full Corrective',  mins:18, desc:'The main event. Run this 3× a week — this is what shifts the curve.',
-    ex:['foam_ext','cat_cow','quad_rot','doorway','lat_stretch','cobra','wall_angel','yti','breath_3d'] },
-  { id:'mobility', name:'Mobility & Open',  mins:10, desc:'Stiffness-focused. Good on rest days or when the upper back feels locked.',
-    ex:['foam_ext','foam_angel','quad_rot','doorway','lat_stretch','dead_hang'] },
-  { id:'strength', name:'Strength Builder', mins:12, desc:'Builds the muscles that hold the position all day. Postural endurance work.',
-    ex:['cobra','wall_angel','yti','prone_elbow','superman','band_pull'] },
-  { id:'desk',     name:'Desk Break',       mins:3,  desc:'Do it at your desk without a mat. Undoes a few hours of sitting.',
-    ex:['sternum_lift','brugger','breath_3d'] },
+
+  { id:'desk', name:'Desk Break', mins:5, freq:'2–3× daily', weeks:'ongoing',
+    src:'Postural practice component of the SHEAF protocol',
+    desc:'No mat, no kit. Undoes a few hours of sitting. Katzman had participants do this 3× a day.',
+    ex:['sternum_lift','brugger','breath_3d','posture_hold'] },
 ];
 
-let postureLog = [];       // [{date, routineId, routineName, exercises, durationMin}]
-let _pxRoutine = null, _pxIdx = 0, _pxTimer = null, _pxTimeLeft = 0, _pxStart = 0, _pxRunning = false;
+let postureLog = [];
+let _pxRoutine=null, _pxIdx=0, _pxSet=1, _pxTimer=null, _pxTimeLeft=0, _pxStart=0, _pxRunning=false, _pxResting=false;
 
 function renderPosture() {
   const statsEl = document.getElementById('posture-stats');
   if (!statsEl) return;
   const today = _todayStr();
-
-  // 7-day and streak stats
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-6);
   const weekKey = weekAgo.toISOString().split('T')[0];
   const thisWeek = postureLog.filter(s => s.date >= weekKey).length;
-
   let streak = 0;
-  for (let i = 0; i < 400; i++) {
-    const d = new Date(); d.setDate(d.getDate()-i);
-    const k = d.toISOString().split('T')[0];
-    if (postureLog.some(s => s.date === k)) streak++;
-    else if (i > 0) break;
+  for (let i=0;i<400;i++){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const k=d.toISOString().split('T')[0];
+    if (postureLog.some(s=>s.date===k)) streak++;
+    else if (i>0) break;
   }
-
   statsEl.innerHTML = `
     <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
       <div style="font-size:1.25rem;font-weight:700;color:var(--purple);font-family:'Rajdhani',sans-serif">${thisWeek}</div>
-      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">this week</div>
-    </div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">this week</div></div>
     <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
       <div style="font-size:1.25rem;font-weight:700;color:var(--amber);font-family:'Rajdhani',sans-serif">${streak}</div>
-      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">day streak</div>
-    </div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">day streak</div></div>
     <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
       <div style="font-size:1.25rem;font-weight:700;color:var(--teal);font-family:'Rajdhani',sans-serif">${postureLog.length}</div>
-      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">total</div>
-    </div>`;
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">total</div></div>`;
 
-  document.getElementById('routine-list').innerHTML = PX_ROUTINES.map(r => {
-    const doneToday = postureLog.some(s => s.date === today && s.routineId === r.id);
-    return `<div onclick="startPostureSession('${r.id}')" style="padding:12px 14px;background:var(--surf);border:1px solid ${doneToday?'rgba(45,212,191,0.3)':'var(--border)'};border-radius:10px;cursor:pointer;transition:all 0.15s">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <div style="min-width:0">
-          <div style="font-size:0.875rem;color:var(--text);font-weight:600;font-family:'Rajdhani',sans-serif;letter-spacing:0.3px">${r.name} ${doneToday?'<span style="color:var(--teal);font-size:0.75rem">✓</span>':''}</div>
-          <div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:2px">${r.desc}</div>
+  document.getElementById('routine-list').innerHTML = PX_ROUTINES.map(r=>{
+    const done = postureLog.some(s=>s.date===today && s.routineId===r.id);
+    const totalSets = r.ex.reduce((a,k)=>a+(PX_EXERCISES[k].sets||1),0);
+    return `<div onclick="startPostureSession('${r.id}')" style="padding:12px 14px;background:var(--surf);border:1px solid ${done?'rgba(45,212,191,0.3)':'var(--border)'};border-radius:10px;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:0.875rem;color:var(--text);font-weight:600;font-family:'Rajdhani',sans-serif;letter-spacing:0.3px">${r.name} ${done?'<span style="color:var(--teal);font-size:0.75rem">✓</span>':''}</div>
+          <div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:3px">${r.desc}</div>
+          <div style="font-size:0.5625rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-top:5px;opacity:0.8">${r.src}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace">${r.mins} min</div>
           <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${r.ex.length} moves</div>
+          <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${totalSets} sets</div>
+          <div style="font-size:0.5625rem;color:var(--amber);font-family:'Share Tech Mono',monospace;margin-top:3px">${r.freq}</div>
         </div>
-      </div>
-    </div>`;
+      </div></div>`;
   }).join('');
 
-  // History
   const hist = document.getElementById('posture-history');
-  const recent = [...postureLog].reverse().slice(0, 12);
-  hist.innerHTML = recent.length ? recent.map(s => {
-    const d = new Date(s.date + 'T00:00:00');
-    const lbl = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const recent = [...postureLog].reverse().slice(0,12);
+  hist.innerHTML = recent.length ? recent.map(s=>{
+    const d=new Date(s.date+'T00:00:00');
     return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.75rem">
       <span style="color:var(--text2)">${s.routineName}</span>
-      <span style="color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:0.6875rem">${lbl} · ${s.exercises} moves</span>
-    </div>`;
+      <span style="color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:0.6875rem">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${s.setsDone||s.exercises} sets</span></div>`;
   }).join('') : `<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">No sessions logged yet</div>`;
 }
 
 function startPostureSession(rid) {
-  _pxRoutine = PX_ROUTINES.find(r => r.id === rid);
+  _pxRoutine = PX_ROUTINES.find(r=>r.id===rid);
   if (!_pxRoutine) return;
-  _pxIdx = 0;
-  _pxStart = Date.now();
+  _pxIdx=0; _pxSet=1; _pxResting=false; _pxStart=Date.now();
   document.getElementById('px-routine-name').textContent = _pxRoutine.name;
-  document.getElementById('posture-overlay').style.display = 'flex';
+  document.getElementById('posture-overlay').style.display='flex';
   _pxRenderStep();
 }
 
+function _pxTotalSets(){ return _pxRoutine.ex.reduce((a,k)=>a+(PX_EXERCISES[k].sets||1),0); }
+function _pxSetsDone(){
+  let n=0;
+  for(let i=0;i<_pxIdx;i++) n+=PX_EXERCISES[_pxRoutine.ex[i]].sets||1;
+  return n+(_pxSet-1);
+}
+
 function _pxRenderStep() {
-  const total = _pxRoutine.ex.length;
-  if (_pxIdx >= total) return _pxFinish();
+  if (_pxIdx >= _pxRoutine.ex.length) return _pxFinish();
   const ex = PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+  const total=_pxTotalSets(), done=_pxSetsDone();
 
-  document.getElementById('px-progress-lbl').textContent = `Exercise ${_pxIdx+1} of ${total}`;
-  document.getElementById('px-progress-bar').style.width = ((_pxIdx)/total*100) + '%';
+  document.getElementById('px-progress-lbl').textContent =
+    `Move ${_pxIdx+1}/${_pxRoutine.ex.length} · Set ${_pxSet} of ${ex.sets} · ${done}/${total} sets done`;
+  document.getElementById('px-progress-bar').style.width = (done/total*100)+'%';
 
-  const unit = ex.type === 'reps' ? `${ex.reps} reps`
-             : ex.type === 'hold' ? `${ex.reps} sec hold`
-             : `${ex.reps} breaths`;
+  const unit = ex.type==='reps' ? `${ex.reps} reps` : ex.type==='hold' ? `${ex.reps} sec` : `${ex.reps} breaths`;
 
   document.getElementById('px-body').innerHTML = `
-    <div style="text-align:center;margin-bottom:14px">
-      <div style="font-family:'Rajdhani',sans-serif;font-size:1.375rem;font-weight:700;color:var(--text);line-height:1.2">${ex.name}${ex.star?' <span style="font-size:0.875rem" title="Highest-evidence movement">★</span>':''}</div>
+    <div style="text-align:center;margin-bottom:12px">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:1.375rem;font-weight:700;color:var(--text);line-height:1.2">${ex.name}${ex.star?' <span style="font-size:0.875rem">★</span>':''}</div>
       <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap">
         <span class="badge" style="background:rgba(157,127,245,0.12);border-color:rgba(157,127,245,0.3);color:var(--purple)">${ex.focus}</span>
         ${ex.kit!=='None'?`<span class="badge" style="background:rgba(100,100,120,0.12);border-color:rgba(100,100,120,0.3);color:var(--text3)">${ex.kit}</span>`:''}
       </div>
     </div>
-    <div id="px-counter" style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:3rem;font-weight:700;color:var(--purple);line-height:1;margin-bottom:6px">${ex.type==='hold'?ex.reps:ex.reps}</div>
-    <div style="text-align:center;font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:16px">${unit}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:4px">
+      <div style="text-align:center">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:1.75rem;font-weight:700;color:var(--text2);line-height:1">${_pxSet}<span style="font-size:1rem;color:var(--text3)">/${ex.sets}</span></div>
+        <div style="font-size:0.5rem;color:var(--text3);font-family:'Share Tech Mono',monospace">SET</div>
+      </div>
+      <div style="width:1px;height:34px;background:var(--border)"></div>
+      <div style="text-align:center">
+        <div id="px-counter" style="font-family:'Rajdhani',sans-serif;font-size:2.75rem;font-weight:700;color:var(--purple);line-height:1">${ex.reps}</div>
+        <div style="font-size:0.5rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${ex.type==='reps'?'REPS':ex.type==='hold'?'SECONDS':'BREATHS'}</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:0.625rem;color:var(--amber);font-family:'Share Tech Mono',monospace;margin-bottom:14px">${ex.tempo}</div>
     <div style="padding:12px 14px;background:var(--surf);border:1px solid var(--border);border-radius:10px;font-size:0.8125rem;color:var(--text2);line-height:1.65">${ex.cue}</div>`;
 
-  const ctrl = document.getElementById('px-controls');
-  if (ex.type === 'hold') {
-    ctrl.innerHTML = `
-      <button onclick="_pxPrev()" class="opt-btn" style="flex:0 0 auto;padding:10px 14px">←</button>
-      <button id="px-timer-btn" onclick="_pxToggleTimer()" class="modal-save" style="flex:1;margin:0;padding:11px">Start Timer</button>
-      <button onclick="_pxNext()" class="opt-btn active" style="flex:0 0 auto;padding:10px 14px">Skip →</button>`;
-    _pxTimeLeft = ex.reps;
+  const ctrl=document.getElementById('px-controls');
+  if (ex.type==='hold') {
+    _pxTimeLeft=ex.reps;
+    ctrl.innerHTML=`<button onclick="_pxPrev()" class="opt-btn" style="flex:0 0 auto;padding:10px 14px">←</button>
+      <button id="px-timer-btn" onclick="_pxToggleTimer()" class="modal-save" style="flex:1;margin:0;padding:11px">Start ${ex.reps}s</button>
+      <button onclick="_pxNextSet()" class="opt-btn active" style="flex:0 0 auto;padding:10px 14px">Skip →</button>`;
   } else {
-    ctrl.innerHTML = `
-      <button onclick="_pxPrev()" class="opt-btn" style="flex:0 0 auto;padding:10px 14px">←</button>
-      <button onclick="_pxNext()" class="modal-save" style="flex:1;margin:0;padding:11px">Done · Next →</button>`;
+    ctrl.innerHTML=`<button onclick="_pxPrev()" class="opt-btn" style="flex:0 0 auto;padding:10px 14px">←</button>
+      <button onclick="_pxNextSet()" class="modal-save" style="flex:1;margin:0;padding:11px">Set Done →</button>`;
   }
 }
+
+function _pxRenderRest(seconds) {
+  _pxResting=true; _pxTimeLeft=seconds;
+  const ex=PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+  const nextLbl = _pxSet<=ex.sets ? `${ex.name} · set ${_pxSet}` :
+    (_pxIdx+1<_pxRoutine.ex.length ? PX_EXERCISES[_pxRoutine.ex[_pxIdx+1]].name : 'Finish');
+  document.getElementById('px-body').innerHTML=`
+    <div style="text-align:center;padding:26px 8px">
+      <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:10px">REST</div>
+      <div id="px-counter" style="font-family:'Rajdhani',sans-serif;font-size:4rem;font-weight:700;color:var(--teal);line-height:1">${seconds}</div>
+      <div style="font-size:0.75rem;color:var(--text3);margin-top:12px">Up next</div>
+      <div style="font-size:0.9375rem;color:var(--text2);font-family:'Rajdhani',sans-serif;font-weight:600">${nextLbl}</div>
+    </div>`;
+  document.getElementById('px-controls').innerHTML=
+    `<button onclick="_pxSkipRest()" class="modal-save" style="flex:1;margin:0;padding:11px">Skip Rest →</button>`;
+  clearInterval(_pxTimer);
+  _pxTimer=setInterval(()=>{
+    _pxTimeLeft--;
+    const c=document.getElementById('px-counter');
+    if(c) c.textContent=_pxTimeLeft;
+    if(_pxTimeLeft<=0) _pxSkipRest();
+  },1000);
+}
+
+function _pxSkipRest(){ clearInterval(_pxTimer); _pxResting=false; _pxRenderStep(); }
 
 function _pxToggleTimer() {
-  const btn = document.getElementById('px-timer-btn');
-  if (_pxRunning) {
-    clearInterval(_pxTimer); _pxRunning = false;
-    btn.textContent = 'Resume';
-    return;
-  }
-  _pxRunning = true;
-  btn.textContent = 'Pause';
-  _pxTimer = setInterval(() => {
+  const btn=document.getElementById('px-timer-btn');
+  if(_pxRunning){ clearInterval(_pxTimer); _pxRunning=false; btn.textContent='Resume'; return; }
+  _pxRunning=true; btn.textContent='Pause';
+  _pxTimer=setInterval(()=>{
     _pxTimeLeft--;
-    const c = document.getElementById('px-counter');
-    if (c) c.textContent = _pxTimeLeft;
-    if (_pxTimeLeft <= 0) {
-      clearInterval(_pxTimer); _pxRunning = false;
-      playHabitTaskSound();
-      _pxNext();
-    }
-  }, 1000);
+    const c=document.getElementById('px-counter');
+    if(c) c.textContent=_pxTimeLeft;
+    if(_pxTimeLeft<=0){ clearInterval(_pxTimer); _pxRunning=false; playHabitTaskSound(); _pxNextSet(); }
+  },1000);
 }
 
-function _pxNext() {
-  clearInterval(_pxTimer); _pxRunning = false;
-  _pxIdx++;
-  _pxRenderStep();
+function _pxNextSet() {
+  clearInterval(_pxTimer); _pxRunning=false;
+  const ex=PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+  if (_pxSet < ex.sets) {
+    _pxSet++;
+    _pxRenderRest(ex.rest||45);
+  } else {
+    _pxIdx++; _pxSet=1;
+    if (_pxIdx>=_pxRoutine.ex.length) return _pxFinish();
+    _pxRenderRest(ex.rest||45);
+  }
 }
 
 function _pxPrev() {
-  clearInterval(_pxTimer); _pxRunning = false;
-  if (_pxIdx > 0) _pxIdx--;
+  clearInterval(_pxTimer); _pxRunning=false; _pxResting=false;
+  if (_pxSet>1) _pxSet--;
+  else if (_pxIdx>0){ _pxIdx--; _pxSet=PX_EXERCISES[_pxRoutine.ex[_pxIdx]].sets; }
   _pxRenderStep();
 }
 
 function _pxFinish() {
-  clearInterval(_pxTimer); _pxRunning = false;
-  const mins = Math.max(1, Math.round((Date.now() - _pxStart) / 60000));
-  const xp = _pxRoutine.ex.length >= 8 ? 60 : _pxRoutine.ex.length >= 5 ? 40 : 20;
-
-  postureLog.push({
-    date: _todayStr(),
-    routineId: _pxRoutine.id,
-    routineName: _pxRoutine.name,
-    exercises: _pxRoutine.ex.length,
-    durationMin: mins
-  });
-  // Trim to 1 year
-  const cut = new Date(); cut.setDate(cut.getDate()-365);
-  const cutKey = cut.toISOString().split('T')[0];
-  postureLog = postureLog.filter(s => s.date >= cutKey);
-
-  _addXP(xp, null);
-  playLevelUpSound();
-  _awardLinkedCurrentXP('Fix Posture', xp);
-
-  document.getElementById('px-progress-bar').style.width = '100%';
-  document.getElementById('px-progress-lbl').textContent = 'Complete';
-  document.getElementById('px-body').innerHTML = `
+  clearInterval(_pxTimer); _pxRunning=false; _pxResting=false;
+  const mins=Math.max(1,Math.round((Date.now()-_pxStart)/60000));
+  const sets=_pxTotalSets();
+  const xp = sets>=16?70 : sets>=10?50 : sets>=6?35 : 20;
+  postureLog.push({date:_todayStr(),routineId:_pxRoutine.id,routineName:_pxRoutine.name,
+    exercises:_pxRoutine.ex.length,setsDone:sets,durationMin:mins});
+  const cut=new Date(); cut.setDate(cut.getDate()-365);
+  postureLog=postureLog.filter(s=>s.date>=cut.toISOString().split('T')[0]);
+  _addXP(xp,null); playLevelUpSound(); _awardLinkedCurrentXP('Fix Posture',xp);
+  document.getElementById('px-progress-bar').style.width='100%';
+  document.getElementById('px-progress-lbl').textContent='Complete';
+  document.getElementById('px-body').innerHTML=`
     <div style="text-align:center;padding:24px 8px">
       <div style="font-size:2.5rem;margin-bottom:10px">✓</div>
       <div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;color:var(--teal);margin-bottom:6px">Session complete</div>
-      <div style="font-size:0.8125rem;color:var(--text2);line-height:1.6;margin-bottom:14px">${_pxRoutine.ex.length} exercises · ${mins} min · +${xp} XP</div>
-      <div style="font-size:0.6875rem;color:var(--text3);line-height:1.6;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:8px">Consistency is what changes the curve. Most studies see measurable improvement around the 6–8 week mark.</div>
+      <div style="font-size:0.8125rem;color:var(--text2);line-height:1.6;margin-bottom:14px">${sets} sets · ${_pxRoutine.ex.length} exercises · ${mins} min · +${xp} XP</div>
+      <div style="font-size:0.6875rem;color:var(--text3);line-height:1.6;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:8px">Target: <strong style="color:var(--purple)">${_pxRoutine.freq}</strong> for ${_pxRoutine.weeks}. Consistency is what moves the curve.</div>
     </div>`;
-  document.getElementById('px-controls').innerHTML =
-    `<button onclick="exitPostureSession()" class="modal-save" style="flex:1;margin:0;padding:11px">Done</button>`;
-  renderPosture();
-  cloudSave();
+  document.getElementById('px-controls').innerHTML=`<button onclick="exitPostureSession()" class="modal-save" style="flex:1;margin:0;padding:11px">Done</button>`;
+  renderPosture(); cloudSave();
 }
 
-function exitPostureSession() {
-  clearInterval(_pxTimer); _pxRunning = false;
-  document.getElementById('posture-overlay').style.display = 'none';
-}
+function exitPostureSession(){ clearInterval(_pxTimer); _pxRunning=false; _pxResting=false;
+  document.getElementById('posture-overlay').style.display='none'; }
 
 // ── SIGNAL AI ─────────────────────────────────────────────
 let signalConversations = []; // [{date,type,messages:[{role,content}]}]
