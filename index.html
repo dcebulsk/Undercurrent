@@ -417,6 +417,9 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="sidebar-item" id="snav-energy" onclick="showPage('energy',this)">
         <span class="sidebar-icon">⚡</span>Energy
       </div>
+      <div class="sidebar-item" id="snav-posture" onclick="showPage('posture',this)">
+        <span class="sidebar-icon">🧍</span>Posture
+      </div>
       <div class="sidebar-item" id="snav-review" onclick="showPage('review',this)">
         <span class="sidebar-icon">📊</span>Review
       </div>
@@ -649,6 +652,23 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       </div>
     </div>
 
+    <!-- POSTURE -->
+    <div class="page" id="page-posture">
+      <div class="card card-accent">
+        <div class="card-title">// posture · thoracic kyphosis</div>
+        <div id="posture-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px"></div>
+        <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:8px;letter-spacing:1px">ROUTINES</div>
+        <div id="routine-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="font-size:0.625rem;color:var(--text3);line-height:1.6;margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">
+          Evidence-based corrective exercises. Consistency beats intensity — most studies show measurable change at 6–8 weeks with 3+ sessions per week. Not a substitute for assessment by a physiotherapist.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">// session history</div>
+        <div id="posture-history"></div>
+      </div>
+    </div>
+
     <!-- REVIEW -->
     <div class="page" id="page-review">
       <div class="card card-accent">
@@ -673,6 +693,26 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <div style="font-size:0.6875rem;color:var(--text3);margin-bottom:8px">📌 = applies all day and auto-carries forward</div>
         <div id="checkin-factor-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px"></div>
         <button class="modal-save" onclick="saveCheckinNew()">Save Check-in</button>
+      </div>
+    </div>
+
+    <!-- POSTURE SESSION PLAYER -->
+    <div id="posture-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,5,15,0.94);z-index:610;align-items:center;justify-content:center">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;max-width:440px;width:94%;max-height:88vh;margin:16px;display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-shrink:0">
+          <div>
+            <div id="px-routine-name" style="font-family:'Rajdhani',sans-serif;font-size:1.125rem;font-weight:700;color:var(--purple)"></div>
+            <div id="px-progress-lbl" style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace"></div>
+          </div>
+          <button onclick="exitPostureSession()" style="background:none;border:none;color:var(--text3);font-size:1.25rem;cursor:pointer">✕</button>
+        </div>
+        <div style="height:5px;background:var(--surf3);border-radius:3px;margin-bottom:16px;overflow:hidden;flex-shrink:0">
+          <div id="px-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--purple2),var(--pink));transition:width 0.3s"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;scrollbar-width:thin">
+          <div id="px-body"></div>
+        </div>
+        <div id="px-controls" style="display:flex;gap:8px;margin-top:14px;flex-shrink:0"></div>
       </div>
     </div>
 
@@ -722,6 +762,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="bnav-item" id="bnav-tasks" onclick="showPage('tasks',this)"><div class="bnav-icon">◻</div><div class="bnav-label">Tasks</div></div>
     <div class="bnav-item" id="bnav-focus" onclick="showPage('focus',this)"><div class="bnav-icon">◷</div><div class="bnav-label">Focus</div></div>
     <div class="bnav-item" id="bnav-energy" onclick="showPage('energy',this)"><div class="bnav-icon">⚡</div><div class="bnav-label">Energy</div></div>
+    <div class="bnav-item" id="bnav-posture" onclick="showPage('posture',this)"><div class="bnav-icon">🧍</div><div class="bnav-label">Posture</div></div>
     <div class="bnav-item" id="bnav-review" onclick="showPage('review',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Review</div></div>
   </div>
 </div>
@@ -1144,6 +1185,7 @@ function showPage(id) {
   if (sn) sn.classList.add('active');
   document.getElementById('content').scrollTop = 0;
   if (id === 'review') buildReview();
+  if (id === 'posture') renderPosture();
   if (id === 'habits') _resetToToday();
 }
 
@@ -3032,6 +3074,7 @@ function _doCloudSave() {
     energyFactors, energyCheckins, checkinState,
     signalConversations, signalLastMorning: _signalLastMorning, signalLastEvening: _signalLastEvening,
     signalApiKey: localStorage.getItem('uc-signal-key') || '',
+    postureLog,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
@@ -3081,6 +3124,7 @@ function _loadFromCloud(uid) {
         _signalLastMorning  = d.signalLastMorning || '';
         _signalLastEvening  = d.signalLastEvening || '';
         if (d.signalApiKey) localStorage.setItem('uc-signal-key', d.signalApiKey);
+        postureLog = Array.isArray(d.postureLog) ? d.postureLog : [];
         // Handle legacy energyFactors (strings) vs new schema (objects)
         if (Array.isArray(d.energyFactors) && d.energyFactors.length > 0) {
           if (typeof d.energyFactors[0] === 'string') {
@@ -3162,6 +3206,7 @@ function _rebuildAll() {
   renderGoals(); renderHabits(); recalcStreaks();
   renderTasks(); renderDailyTasks(); buildCalendar();
   renderCheckinLog();
+  renderPosture();
   _renderLabelFilterChips();
   _updateVacationUI();
   renderTrends(); updateXPBar();
@@ -3530,6 +3575,226 @@ function _initAllDrag() {
   _initDrag(document.getElementById('task-list'),  'task');
 }
 
+// ── POSTURE / THORACIC KYPHOSIS ───────────────────────────
+// type: 'reps' (count) | 'hold' (seconds) | 'breath' (breath cycles)
+const PX_EXERCISES = {
+  foam_ext: { name:'Foam Roller Thoracic Extension', type:'reps', reps:10, cue:'Roller across mid-back, knees bent, hands supporting head. Arch back over the roller, hold 2s, return. Move roller up/down to find stiff segments.', focus:'Mobility', kit:'Foam roller' },
+  foam_angel: { name:'Foam Roller Snow Angels', type:'breath', reps:8, cue:'Lie lengthwise along the roller, head to tailbone supported. Arms out in a T, sweep overhead slowly. One rep per slow breath.', focus:'Mobility', kit:'Foam roller' },
+  cat_cow: { name:'Cat–Cow (Cow Emphasis)', type:'reps', reps:12, cue:'Tabletop position. Inhale into cow — drop belly, lift chest and tailbone. Exhale to cat. Spend extra time in cow.', focus:'Mobility', kit:'None' },
+  quad_rot: { name:'Quadruped Thoracic Rotation', type:'reps', reps:10, cue:'Hand behind head, rotate elbow up toward ceiling, follow with your eyes. 10 each side. Keep hips square.', focus:'Mobility', kit:'None' },
+  doorway: { name:'Doorway Pec Stretch', type:'hold', reps:30, cue:'Forearms on the frame at 90°, step through gently. Hold and breathe. Repeat at low, mid, and high arm angles.', focus:'Stretch', kit:'Doorway' },
+  lat_stretch: { name:'Static Lat Stretch', type:'hold', reps:30, cue:'On all fours, one forearm on a ball or chair, sink hips back. Tight lats pull shoulders forward and worsen the curve.', focus:'Stretch', kit:'Ball or chair' },
+  cobra: { name:'Prone Cobra', type:'reps', reps:10, cue:'Face-down, arms at sides, palms down. Squeeze glutes. Lift head, chest and arms, thumbs to ceiling, squeeze shoulder blades. Hold 3–5s at the top, lower over 3s.', focus:'Strength', kit:'None', star:true },
+  wall_angel: { name:'Wall Angels', type:'reps', reps:10, cue:'Back to wall, arms in a W. Slide arms overhead keeping elbows and wrists on the wall. Ribs down, no low-back arch.', focus:'Strength', kit:'Wall' },
+  yti: { name:'Prone Y-T-I Raises', type:'reps', reps:8, cue:'Face-down. Arms in a Y, lift and lower. Then T. Then I. 8 reps of each shape. Thumbs up throughout.', focus:'Strength', kit:'None' },
+  prone_elbow: { name:'Prone Elbow Lifts', type:'reps', reps:12, cue:'Face-down, hands behind head, elbows wide. Lift elbows toward ceiling, squeezing between the shoulder blades. Head stays neutral.', focus:'Strength', kit:'None' },
+  brugger: { name:"Brügger's Relief Position", type:'hold', reps:20, cue:'Sit at the edge of a chair. Arms down and out, palms forward, thumbs back. Lift the sternum, roll shoulders back and down. Breathe.', focus:'Strength', kit:'Chair' },
+  band_pull: { name:'Band Pull-Apart', type:'reps', reps:15, cue:'Band at chest height, arms straight. Pull apart, squeezing shoulder blades. Slow return. Keep ribs down.', focus:'Strength', kit:'Resistance band' },
+  sternum_lift: { name:'Standing Sternum Lift', type:'reps', reps:10, cue:'Thumbs under armpits, fingers up. Lift thumbs as high as you can — this extends the thoracic spine and lifts the sternum. Hold 3s.', focus:'Desk break', kit:'None' },
+  breath_3d: { name:'3D Rotational Breathing', type:'breath', reps:10, cue:'Seated tall. Breathe wide into the back and sides of the ribcage, not the belly. Exhale slowly. Schroth-style expansion into the flattened area.', focus:'Breathing', kit:'None' },
+  dead_hang: { name:'Dead Hang', type:'hold', reps:30, cue:'Passive hang from a bar. Let the spine decompress. Relax the shoulders and just breathe.', focus:'Mobility', kit:'Pull-up bar' },
+  superman: { name:'Superman Hold', type:'hold', reps:15, cue:'Face-down, arms forward. Lift arms, chest and legs. Only until you feel the mid-back working — do not crank the low back.', focus:'Strength', kit:'None' },
+};
+
+const PX_ROUTINES = [
+  { id:'daily',    name:'Daily Reset',      mins:6,  desc:'Short enough to actually do every day. Mobility + the key strength move.',
+    ex:['cat_cow','foam_ext','cobra','sternum_lift'] },
+  { id:'full',     name:'Full Corrective',  mins:18, desc:'The main event. Run this 3× a week — this is what shifts the curve.',
+    ex:['foam_ext','cat_cow','quad_rot','doorway','lat_stretch','cobra','wall_angel','yti','breath_3d'] },
+  { id:'mobility', name:'Mobility & Open',  mins:10, desc:'Stiffness-focused. Good on rest days or when the upper back feels locked.',
+    ex:['foam_ext','foam_angel','quad_rot','doorway','lat_stretch','dead_hang'] },
+  { id:'strength', name:'Strength Builder', mins:12, desc:'Builds the muscles that hold the position all day. Postural endurance work.',
+    ex:['cobra','wall_angel','yti','prone_elbow','superman','band_pull'] },
+  { id:'desk',     name:'Desk Break',       mins:3,  desc:'Do it at your desk without a mat. Undoes a few hours of sitting.',
+    ex:['sternum_lift','brugger','breath_3d'] },
+];
+
+let postureLog = [];       // [{date, routineId, routineName, exercises, durationMin}]
+let _pxRoutine = null, _pxIdx = 0, _pxTimer = null, _pxTimeLeft = 0, _pxStart = 0, _pxRunning = false;
+
+function renderPosture() {
+  const statsEl = document.getElementById('posture-stats');
+  if (!statsEl) return;
+  const today = _todayStr();
+
+  // 7-day and streak stats
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-6);
+  const weekKey = weekAgo.toISOString().split('T')[0];
+  const thisWeek = postureLog.filter(s => s.date >= weekKey).length;
+
+  let streak = 0;
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const k = d.toISOString().split('T')[0];
+    if (postureLog.some(s => s.date === k)) streak++;
+    else if (i > 0) break;
+  }
+
+  statsEl.innerHTML = `
+    <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
+      <div style="font-size:1.25rem;font-weight:700;color:var(--purple);font-family:'Rajdhani',sans-serif">${thisWeek}</div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">this week</div>
+    </div>
+    <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
+      <div style="font-size:1.25rem;font-weight:700;color:var(--amber);font-family:'Rajdhani',sans-serif">${streak}</div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">day streak</div>
+    </div>
+    <div style="padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:8px;text-align:center">
+      <div style="font-size:1.25rem;font-weight:700;color:var(--teal);font-family:'Rajdhani',sans-serif">${postureLog.length}</div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">total</div>
+    </div>`;
+
+  document.getElementById('routine-list').innerHTML = PX_ROUTINES.map(r => {
+    const doneToday = postureLog.some(s => s.date === today && s.routineId === r.id);
+    return `<div onclick="startPostureSession('${r.id}')" style="padding:12px 14px;background:var(--surf);border:1px solid ${doneToday?'rgba(45,212,191,0.3)':'var(--border)'};border-radius:10px;cursor:pointer;transition:all 0.15s">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="min-width:0">
+          <div style="font-size:0.875rem;color:var(--text);font-weight:600;font-family:'Rajdhani',sans-serif;letter-spacing:0.3px">${r.name} ${doneToday?'<span style="color:var(--teal);font-size:0.75rem">✓</span>':''}</div>
+          <div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:2px">${r.desc}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace">${r.mins} min</div>
+          <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${r.ex.length} moves</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // History
+  const hist = document.getElementById('posture-history');
+  const recent = [...postureLog].reverse().slice(0, 12);
+  hist.innerHTML = recent.length ? recent.map(s => {
+    const d = new Date(s.date + 'T00:00:00');
+    const lbl = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.75rem">
+      <span style="color:var(--text2)">${s.routineName}</span>
+      <span style="color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:0.6875rem">${lbl} · ${s.exercises} moves</span>
+    </div>`;
+  }).join('') : `<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:16px;font-family:'Share Tech Mono',monospace">No sessions logged yet</div>`;
+}
+
+function startPostureSession(rid) {
+  _pxRoutine = PX_ROUTINES.find(r => r.id === rid);
+  if (!_pxRoutine) return;
+  _pxIdx = 0;
+  _pxStart = Date.now();
+  document.getElementById('px-routine-name').textContent = _pxRoutine.name;
+  document.getElementById('posture-overlay').style.display = 'flex';
+  _pxRenderStep();
+}
+
+function _pxRenderStep() {
+  const total = _pxRoutine.ex.length;
+  if (_pxIdx >= total) return _pxFinish();
+  const ex = PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+
+  document.getElementById('px-progress-lbl').textContent = `Exercise ${_pxIdx+1} of ${total}`;
+  document.getElementById('px-progress-bar').style.width = ((_pxIdx)/total*100) + '%';
+
+  const unit = ex.type === 'reps' ? `${ex.reps} reps`
+             : ex.type === 'hold' ? `${ex.reps} sec hold`
+             : `${ex.reps} breaths`;
+
+  document.getElementById('px-body').innerHTML = `
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:1.375rem;font-weight:700;color:var(--text);line-height:1.2">${ex.name}${ex.star?' <span style="font-size:0.875rem" title="Highest-evidence movement">★</span>':''}</div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap">
+        <span class="badge" style="background:rgba(157,127,245,0.12);border-color:rgba(157,127,245,0.3);color:var(--purple)">${ex.focus}</span>
+        ${ex.kit!=='None'?`<span class="badge" style="background:rgba(100,100,120,0.12);border-color:rgba(100,100,120,0.3);color:var(--text3)">${ex.kit}</span>`:''}
+      </div>
+    </div>
+    <div id="px-counter" style="text-align:center;font-family:'Rajdhani',sans-serif;font-size:3rem;font-weight:700;color:var(--purple);line-height:1;margin-bottom:6px">${ex.type==='hold'?ex.reps:ex.reps}</div>
+    <div style="text-align:center;font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:16px">${unit}</div>
+    <div style="padding:12px 14px;background:var(--surf);border:1px solid var(--border);border-radius:10px;font-size:0.8125rem;color:var(--text2);line-height:1.65">${ex.cue}</div>`;
+
+  const ctrl = document.getElementById('px-controls');
+  if (ex.type === 'hold') {
+    ctrl.innerHTML = `
+      <button onclick="_pxPrev()" class="opt-btn" style="flex:0 0 auto;padding:10px 14px">←</button>
+      <button id="px-timer-btn" onclick="_pxToggleTimer()" class="modal-save" style="flex:1;margin:0;padding:11px">Start Timer</button>
+      <button onclick="_pxNext()" class="opt-btn active" style="flex:0 0 auto;padding:10px 14px">Skip →</button>`;
+    _pxTimeLeft = ex.reps;
+  } else {
+    ctrl.innerHTML = `
+      <button onclick="_pxPrev()" class="opt-btn" style="flex:0 0 auto;padding:10px 14px">←</button>
+      <button onclick="_pxNext()" class="modal-save" style="flex:1;margin:0;padding:11px">Done · Next →</button>`;
+  }
+}
+
+function _pxToggleTimer() {
+  const btn = document.getElementById('px-timer-btn');
+  if (_pxRunning) {
+    clearInterval(_pxTimer); _pxRunning = false;
+    btn.textContent = 'Resume';
+    return;
+  }
+  _pxRunning = true;
+  btn.textContent = 'Pause';
+  _pxTimer = setInterval(() => {
+    _pxTimeLeft--;
+    const c = document.getElementById('px-counter');
+    if (c) c.textContent = _pxTimeLeft;
+    if (_pxTimeLeft <= 0) {
+      clearInterval(_pxTimer); _pxRunning = false;
+      playHabitTaskSound();
+      _pxNext();
+    }
+  }, 1000);
+}
+
+function _pxNext() {
+  clearInterval(_pxTimer); _pxRunning = false;
+  _pxIdx++;
+  _pxRenderStep();
+}
+
+function _pxPrev() {
+  clearInterval(_pxTimer); _pxRunning = false;
+  if (_pxIdx > 0) _pxIdx--;
+  _pxRenderStep();
+}
+
+function _pxFinish() {
+  clearInterval(_pxTimer); _pxRunning = false;
+  const mins = Math.max(1, Math.round((Date.now() - _pxStart) / 60000));
+  const xp = _pxRoutine.ex.length >= 8 ? 60 : _pxRoutine.ex.length >= 5 ? 40 : 20;
+
+  postureLog.push({
+    date: _todayStr(),
+    routineId: _pxRoutine.id,
+    routineName: _pxRoutine.name,
+    exercises: _pxRoutine.ex.length,
+    durationMin: mins
+  });
+  // Trim to 1 year
+  const cut = new Date(); cut.setDate(cut.getDate()-365);
+  const cutKey = cut.toISOString().split('T')[0];
+  postureLog = postureLog.filter(s => s.date >= cutKey);
+
+  _addXP(xp, null);
+  playLevelUpSound();
+  _awardLinkedCurrentXP('Fix Posture', xp);
+
+  document.getElementById('px-progress-bar').style.width = '100%';
+  document.getElementById('px-progress-lbl').textContent = 'Complete';
+  document.getElementById('px-body').innerHTML = `
+    <div style="text-align:center;padding:24px 8px">
+      <div style="font-size:2.5rem;margin-bottom:10px">✓</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;color:var(--teal);margin-bottom:6px">Session complete</div>
+      <div style="font-size:0.8125rem;color:var(--text2);line-height:1.6;margin-bottom:14px">${_pxRoutine.ex.length} exercises · ${mins} min · +${xp} XP</div>
+      <div style="font-size:0.6875rem;color:var(--text3);line-height:1.6;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:8px">Consistency is what changes the curve. Most studies see measurable improvement around the 6–8 week mark.</div>
+    </div>`;
+  document.getElementById('px-controls').innerHTML =
+    `<button onclick="exitPostureSession()" class="modal-save" style="flex:1;margin:0;padding:11px">Done</button>`;
+  renderPosture();
+  cloudSave();
+}
+
+function exitPostureSession() {
+  clearInterval(_pxTimer); _pxRunning = false;
+  document.getElementById('posture-overlay').style.display = 'none';
+}
+
 // ── SIGNAL AI ─────────────────────────────────────────────
 let signalConversations = []; // [{date,type,messages:[{role,content}]}]
 let _signalLastMorning = '';
@@ -3597,6 +3862,12 @@ function _buildDataSnapshot() {
     weekRates.push({ date:key, pct: sched>0?Math.round(done/sched*100):null });
   }
 
+  // Posture sessions (last 14 days)
+  const pxCut = new Date(); pxCut.setDate(pxCut.getDate()-14);
+  const pxCutKey = pxCut.toISOString().split('T')[0];
+  const postureRecent = postureLog.filter(s => s.date >= pxCutKey)
+    .map(s => ({date:s.date, routine:s.routineName}));
+
   // Last evening reflection
   const lastEvening = signalConversations
     .filter(c=>c.type==='evening')
@@ -3608,6 +3879,7 @@ function _buildDataSnapshot() {
     habits: habitSummary, streaksAtRisk: atRisk,
     openTasks: taskSummary, energyToday: todayEnergy,
     currents: currentsSummary, weekCompletion: weekRates,
+    postureSessionsLast14Days: postureRecent,
     lastEveningReflection: lastEvening ? lastEvening.messages : null,
     vacation
   };
@@ -3946,6 +4218,7 @@ renderTasks(); renderDailyTasks();
 buildCalendar();
 recalcStreaks();
 renderCheckinLog();
+renderPosture();
 _renderLabelFilterChips();
 updateXPBar();
 _lastLevel = _calcLevel(totalXP).level;
