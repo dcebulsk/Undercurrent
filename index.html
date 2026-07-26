@@ -130,11 +130,17 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── BOTTOM NAV (mobile only) ── */
-.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom)}
-.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;cursor:pointer;color:var(--text3);transition:color 0.15s}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);z-index:50;padding-bottom:env(safe-area-inset-bottom)}
+.bnav-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.bnav-track::-webkit-scrollbar{display:none}
+.bnav-page{flex:0 0 100%;display:flex;scroll-snap-align:start}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;cursor:pointer;color:var(--text3);transition:color 0.15s;min-width:0}
 .bnav-item.active{color:var(--purple)}
 .bnav-icon{font-size:1.25rem;line-height:1}
-.bnav-label{font-size:0.625rem;letter-spacing:1.5px;text-transform:uppercase;font-family:'Share Tech Mono',monospace}
+.bnav-label{font-size:0.625rem;letter-spacing:1.5px;text-transform:uppercase;font-family:'Share Tech Mono',monospace;white-space:nowrap}
+.bnav-dots{display:flex;justify-content:center;gap:6px;padding:5px 0 3px}
+.bnav-dot{width:5px;height:5px;border-radius:50%;background:var(--surf3);transition:background 0.2s,width 0.2s}
+.bnav-dot.active{background:var(--purple);width:16px;border-radius:3px}
 
 /* ── CARDS ── */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
@@ -757,13 +763,26 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     </div>
 
   <div class="bnav">
-    <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Currents</div></div>
-    <div class="bnav-item" id="bnav-habits" onclick="showPage('habits',this)"><div class="bnav-icon">◎</div><div class="bnav-label">Habits</div></div>
-    <div class="bnav-item" id="bnav-tasks" onclick="showPage('tasks',this)"><div class="bnav-icon">◻</div><div class="bnav-label">Tasks</div></div>
-    <div class="bnav-item" id="bnav-focus" onclick="showPage('focus',this)"><div class="bnav-icon">◷</div><div class="bnav-label">Focus</div></div>
-    <div class="bnav-item" id="bnav-energy" onclick="showPage('energy',this)"><div class="bnav-icon">⚡</div><div class="bnav-label">Energy</div></div>
-    <div class="bnav-item" id="bnav-posture" onclick="showPage('posture',this)"><div class="bnav-icon">🧍</div><div class="bnav-label">Posture</div></div>
-    <div class="bnav-item" id="bnav-review" onclick="showPage('review',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Review</div></div>
+    <div class="bnav-dots" id="bnav-dots">
+      <div class="bnav-dot active" onclick="_bnavGoPage(0)"></div>
+      <div class="bnav-dot" onclick="_bnavGoPage(1)"></div>
+    </div>
+    <div class="bnav-track" id="bnav-track">
+      <div class="bnav-page">
+        <div class="bnav-item active" id="bnav-goals" onclick="showPage('goals',this)"><div class="bnav-icon">◆</div><div class="bnav-label">Currents</div></div>
+        <div class="bnav-item" id="bnav-habits" onclick="showPage('habits',this)"><div class="bnav-icon">◎</div><div class="bnav-label">Habits</div></div>
+        <div class="bnav-item" id="bnav-tasks" onclick="showPage('tasks',this)"><div class="bnav-icon">◻</div><div class="bnav-label">Tasks</div></div>
+        <div class="bnav-item" id="bnav-focus" onclick="showPage('focus',this)"><div class="bnav-icon">◷</div><div class="bnav-label">Focus</div></div>
+        <div class="bnav-item" id="bnav-energy" onclick="showPage('energy',this)"><div class="bnav-icon">⚡</div><div class="bnav-label">Energy</div></div>
+      </div>
+      <div class="bnav-page">
+        <div class="bnav-item" id="bnav-posture" onclick="showPage('posture',this)"><div class="bnav-icon">🧍</div><div class="bnav-label">Posture</div></div>
+        <div class="bnav-item" id="bnav-review" onclick="showPage('review',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Review</div></div>
+        <div class="bnav-item" style="visibility:hidden;pointer-events:none"><div class="bnav-icon">·</div><div class="bnav-label"> </div></div>
+        <div class="bnav-item" style="visibility:hidden;pointer-events:none"><div class="bnav-icon">·</div><div class="bnav-label"> </div></div>
+        <div class="bnav-item" style="visibility:hidden;pointer-events:none"><div class="bnav-icon">·</div><div class="bnav-label"> </div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -873,13 +892,16 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="modal-section">Label <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
     <div class="opt-row" id="task-label-opts" style="flex-wrap:wrap;gap:6px"></div>
     <div class="modal-section">Priority</div>
-    <div class="opt-row">
+    <div class="opt-row" style="flex-wrap:wrap;gap:6px">
       <div class="opt-btn active" onclick="toggleOpt(this,'task-priority')">High</div>
       <div class="opt-btn" onclick="toggleOpt(this,'task-priority')">Medium</div>
       <div class="opt-btn" onclick="toggleOpt(this,'task-priority')">Low</div>
+      <div class="opt-btn" onclick="toggleOpt(this,'task-priority')">Optional</div>
     </div>
     <div class="modal-section">Due Date</div>
     <input class="field-input" id="task-due-input" type="date">
+    <div class="modal-section">Notes <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
+    <textarea class="field-input" id="task-notes-input" placeholder="Links, context, things to check out later…" style="min-height:70px;resize:vertical;font-family:inherit;line-height:1.5"></textarea>
     <div class="modal-section">Link to Current (optional)</div>
     <select class="field-input" id="task-goal-link" style="cursor:pointer"></select>
     <button class="modal-save" onclick="saveTask()">Save Task</button>
@@ -1174,6 +1196,22 @@ let habitStreakType = 'daily';
 let habitCompletions = {}; // { 'YYYY-MM-DD': count }
 
 // ── PAGE NAV ──────────────────────────────────────────────
+function _bnavGoPage(idx) {
+  const track = document.getElementById('bnav-track');
+  if (track) track.scrollTo({ left: idx * track.clientWidth, behavior: 'smooth' });
+}
+
+function _bnavUpdateDots() {
+  const track = document.getElementById('bnav-track');
+  if (!track) return;
+  const page = Math.round(track.scrollLeft / track.clientWidth);
+  document.querySelectorAll('#bnav-dots .bnav-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === page));
+}
+
+// Which nav page each section lives on
+const _BNAV_PAGES = { goals:0, habits:0, tasks:0, focus:0, energy:0, posture:1, review:1 };
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
@@ -1187,6 +1225,8 @@ function showPage(id) {
   if (id === 'review') buildReview();
   if (id === 'posture') renderPosture();
   if (id === 'habits') _resetToToday();
+  // Pull the correct nav page into view
+  if (_BNAV_PAGES[id] !== undefined) _bnavGoPage(_BNAV_PAGES[id]);
 }
 
 function _resetToToday() {
@@ -1693,6 +1733,7 @@ function prepTaskModal(id) {
   const t = id ? tasks.find(x=>x.id===id) : null;
   document.getElementById('task-modal-title').textContent = t ? 'Edit Task' : 'New Task';
   document.getElementById('task-name-input').value = t ? t.text : '';
+  document.getElementById('task-notes-input').value = t ? (t.notes || '') : '';
   buildGoalDropdown('task-goal-link', t ? t.goal : '');
   document.getElementById('task-delete-btn').style.display = t ? 'block' : 'none';
   const today = new Date();
@@ -1703,8 +1744,8 @@ function prepTaskModal(id) {
     document.getElementById('task-due-input').value = '';
   }
   document.querySelectorAll('#modal-add-task .opt-btn').forEach(b=>{
-    if (['High','Medium','Low'].includes(b.textContent)) {
-      const map = {High:'high',Medium:'med',Low:'low'};
+    if (['High','Medium','Low','Optional'].includes(b.textContent)) {
+      const map = {High:'high',Medium:'med',Low:'low',Optional:'optional'};
       b.classList.toggle('active', map[b.textContent]===(t?t.priority:'high'));
     }
   });
@@ -1714,9 +1755,10 @@ function prepTaskModal(id) {
 function saveTask() {
   const text = document.getElementById('task-name-input').value.trim();
   if (!text) { _showFieldError('task-name-input','task-name-err'); return; }
-  const prioEl = [...document.querySelectorAll('#modal-add-task .opt-btn')].find(b=>['High','Medium','Low'].includes(b.textContent)&&b.classList.contains('active'));
-  const prioMap = {High:'high',Medium:'med',Low:'low'};
+  const prioEl = [...document.querySelectorAll('#modal-add-task .opt-btn')].find(b=>['High','Medium','Low','Optional'].includes(b.textContent)&&b.classList.contains('active'));
+  const prioMap = {High:'high',Medium:'med',Low:'low',Optional:'optional'};
   const priority = prioEl ? prioMap[prioEl.textContent] : 'med';
+  const notes = document.getElementById('task-notes-input').value.trim();
   const dueVal = document.getElementById('task-due-input').value;
   const today = new Date(); today.setHours(0,0,0,0);
   const dueDate = dueVal ? new Date(dueVal+'T00:00:00') : today;
@@ -1726,9 +1768,9 @@ function saveTask() {
   const label = _getModalLabel('task-label-opts');
   if (editingId !== null) {
     const t = tasks.find(x=>x.id===editingId);
-    if (t) Object.assign(t,{text,priority,daysUntilDue,goal,label:label||''});
+    if (t) Object.assign(t,{text,priority,daysUntilDue,goal,label:label||'',notes});
   } else {
-    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,done:false,label:label||''});
+    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,done:false,label:label||'',notes});
   }
   closeModal('add-task');
   renderTasks(); renderDailyTasks();
@@ -1751,7 +1793,7 @@ function renderTasks() {
   const done   = sorted.filter(t=>t.done);
 
   const sortFn = {
-    priority:    (a,b) => ({'high':0,'med':1,'low':2}[a.priority]||0) - ({'high':0,'med':1,'low':2}[b.priority]||0),
+    priority:    (a,b) => ({'high':0,'med':1,'low':2,'optional':3}[a.priority]??1) - ({'high':0,'med':1,'low':2,'optional':3}[b.priority]??1),
     due_soonest: (a,b) => {
       if(a.daysUntilDue<0&&b.daysUntilDue>=0)return 1;
       if(a.daysUntilDue>=0&&b.daysUntilDue<0)return -1;
@@ -1761,12 +1803,12 @@ function renderTasks() {
   };
   if (sortFn[taskSort]) { undone.sort(sortFn[taskSort]); done.sort(sortFn[taskSort]); }
 
-  const pLabels={high:'// high priority',med:'// medium priority',low:'// low priority'};
-  const pCls={high:'ps-high',med:'ps-med',low:'ps-low'};
+  const pLabels={high:'// high priority',med:'// medium priority',low:'// low priority',optional:'// optional'};
+  const pCls={high:'ps-high',med:'ps-med',low:'ps-low',optional:'ps-low'};
 
   let html='';
   if(taskSort==='priority'){
-    ['high','med','low'].forEach(p=>{
+    ['high','med','low','optional'].forEach(p=>{
       const grp=undone.filter(t=>t.priority===p);
       if(!grp.length)return;
       html+=`<div class="task-section-lbl ${pCls[p]}">${pLabels[p]}</div>`;
@@ -1795,7 +1837,7 @@ function taskRowHTML(t) {
   else if(d===0){dueTxt='due today';dueCls='due-today';}
   else if(d===1){dueTxt='due tomorrow';dueCls='due-soon';}
   else{dueTxt=`due in ${d}d`;dueCls='due-ok';}
-  const pColors={high:'var(--pink)',med:'var(--amber)',low:'var(--teal)'};
+  const pColors={high:'var(--pink)',med:'var(--amber)',low:'var(--teal)',optional:'var(--text3)'};
   const overdue=!t.done&&d<0?`<span class="overdue-badge">${Math.abs(d)}d late</span>`:'';
   const inDaily = dailyTaskIds.has(t.id);
   return `<div class="task-row" data-id="${t.id}" data-type="task" draggable="true">
@@ -1805,6 +1847,7 @@ function taskRowHTML(t) {
       <div class="task-text${t.done?' done':''}" onclick="openModal('add-task',${t.id})">${t.text}</div>
       ${t.goal?`<div class="task-goal-link">→ ${t.goal}</div>`:''}
       ${t.label?`<div style="display:inline-block;margin-top:2px;padding:1px 8px;background:rgba(67,232,249,0.1);border:1px solid rgba(67,232,249,0.25);border-radius:10px;font-size:0.625rem;color:var(--cyan);font-family:'Share Tech Mono',monospace">${t.label}</div>`:''}
+      ${t.notes?`<div style="margin-top:4px;font-size:0.6875rem;color:var(--text3);line-height:1.5;white-space:pre-wrap;padding-left:8px;border-left:2px solid var(--border2)">${t.notes.replace(/</g,'&lt;')}</div>`:''}
       <div class="task-due-row"><span class="task-due ${dueCls}">${dueTxt}</span>${overdue}</div>
     </div>
     <button class="star-btn ${inDaily?'starred':''}" onclick="addToDaily(${t.id})" title="${inDaily?'Remove from today':'Add to today'}">📌</button>
@@ -1877,7 +1920,7 @@ function renderDailyTasks() {
 
   list.innerHTML = dailyTasks.map((t, i) => {
     const isPinned = pinnedTaskIds.has(t.id);
-    const pColors = {high:'var(--pink)',med:'var(--amber)',low:'var(--teal)'};
+    const pColors = {high:'var(--pink)',med:'var(--amber)',low:'var(--teal)',optional:'var(--text3)'};
     const d = t.daysUntilDue;
     let dueTxt, dueCls;
     if(t.done)     {dueTxt='done ✓';         dueCls='due-done';}
@@ -2832,7 +2875,7 @@ function _calcLevel(xp) {
 
 // XP awards
 const XP_HABIT  = {Easy:15, Medium:30, Hard:50};
-const XP_TASK   = {high:40, med:25, low:15};
+const XP_TASK   = {high:40, med:25, low:15, optional:10};
 const XP_POMO   = {25:35,   50:75,  90:120};
 
 let totalXP = 0;
@@ -4315,7 +4358,15 @@ setInterval(() => {
 // Check yesterday popup after data settles
 setTimeout(_checkYesterdayPopup, 1200);
 _checkSignalDot();
-_checkSignalDot();
+
+// Bottom nav pagination — update dots on swipe
+(function(){
+  const track = document.getElementById('bnav-track');
+  if (track) track.addEventListener('scroll', () => {
+    clearTimeout(track._dotTimer);
+    track._dotTimer = setTimeout(_bnavUpdateDots, 60);
+  });
+})();
 
 // ── SERVICE WORKER ────────────────────────────────────────
 if ('serviceWorker' in navigator) {
