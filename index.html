@@ -496,7 +496,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
           </div>
           <div class="sort-bar">
             <span class="sort-lbl">Sort:</span>
-            <div class="sort-chip active" onclick="sortHabits('default',this)">Default</div>
+            <div class="sort-chip active" onclick="sortHabits('default',this)" title="Today's incomplete habits first, easiest first">Smart</div>
             <div class="sort-chip" onclick="sortHabits('streak',this)">🔥 Streak</div>
             <div class="sort-chip" onclick="sortHabits('difficulty',this)">Difficulty</div>
             <div class="sort-chip" onclick="sortHabits('consistency',this)">Consistency</div>
@@ -1460,32 +1460,44 @@ function renderHabits() {
   const DAY_LETTERS = ['M','T','W','T','F','S','S'];
   let list = [...habits];
   if (_habitLabelFilter !== 'all') list = list.filter(h => h.label === _habitLabelFilter);
-  if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
-  else if (habitSort==='difficulty') list=[...list].sort((a,b)=>({'Easy':0,'Medium':1,'Hard':2}[b.diff]||0)-({'Easy':0,'Medium':1,'Hard':2}[a.diff]||0));
-  else if (habitSort==='consistency') list=[...list].sort((a,b)=>b.consistency-a.consistency);
 
   const todayDow = (new Date().getDay() + 6) % 7;
   const isViewingToday = selectedDay === todayDow;
 
   // Calculate the date for the selected day tab
-  // If selected day is today or earlier this week, calculate the date
   const today = new Date(); today.setHours(0,0,0,0);
   let dayDiff = selectedDay - todayDow;
   if (dayDiff > 0) dayDiff -= 7; // always look back, not forward
   const viewDate = new Date(today); viewDate.setDate(today.getDate() + dayDiff);
   const viewDateKey = viewDate.toISOString().split('T')[0];
 
+  const _isDoneFor = h => isViewingToday ? h.done : !!(h.completionLog||{})[viewDateKey];
+  const _diffRank  = h => ({'Easy':0,'Medium':1,'Hard':2}[h.diff] ?? 1);
+
+  if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
+  else if (habitSort==='difficulty') list=[...list].sort((a,b)=>_diffRank(b)-_diffRank(a));
+  else if (habitSort==='consistency') list=[...list].sort((a,b)=>b.consistency-a.consistency);
+  else if (habitSort==='manual') { /* preserve array order from drag reorder */ }
+  else {
+    // Default: scheduled + not done first (low→high difficulty), then done, then not scheduled
+    list=[...list].sort((a,b)=>{
+      const aSched=(a.days||[]).includes(selectedDay), bSched=(b.days||[]).includes(selectedDay);
+      const aDone=_isDoneFor(a), bDone=_isDoneFor(b);
+      const rank=h=>{ const s=(h.days||[]).includes(selectedDay); const d=_isDoneFor(h);
+        if(s&&!d)return 0; if(s&&d)return 1; return 2; };
+      const ra=rank(a), rb=rank(b);
+      if(ra!==rb)return ra-rb;
+      // within same group, sort by difficulty low→high
+      return _diffRank(a)-_diffRank(b);
+    });
+  }
+
   document.getElementById('habit-list').innerHTML = list.map(h=>{
     const isActive = (h.days||[]).includes(selectedDay);
     const inactive = !isActive;
 
     // Determine done state for the viewed day
-    let isDone;
-    if (isViewingToday) {
-      isDone = h.done;
-    } else {
-      isDone = !!(h.completionLog||{})[viewDateKey];
-    }
+    const isDone = _isDoneFor(h);
 
     const missedYesterday = isViewingToday ? _habitMissedYesterday(h) : false;
     const isWarning = missedYesterday && !isDone && isActive;
@@ -1737,8 +1749,8 @@ function prepTaskModal(id) {
   buildGoalDropdown('task-goal-link', t ? t.goal : '');
   document.getElementById('task-delete-btn').style.display = t ? 'block' : 'none';
   const today = new Date();
-  if (t) {
-    const due = new Date(today.getTime() + (t.daysUntilDue??0)*86400000);
+  if (t && t.daysUntilDue !== null && t.daysUntilDue !== undefined) {
+    const due = new Date(today.getTime() + t.daysUntilDue*86400000);
     document.getElementById('task-due-input').value = due.toISOString().split('T')[0];
   } else {
     document.getElementById('task-due-input').value = '';
@@ -1761,8 +1773,8 @@ function saveTask() {
   const notes = document.getElementById('task-notes-input').value.trim();
   const dueVal = document.getElementById('task-due-input').value;
   const today = new Date(); today.setHours(0,0,0,0);
-  const dueDate = dueVal ? new Date(dueVal+'T00:00:00') : today;
-  const daysUntilDue = Math.round((dueDate-today)/(86400000));
+  // Blank due date means no due date (null), not "today"
+  const daysUntilDue = dueVal ? Math.round((new Date(dueVal+'T00:00:00')-today)/86400000) : null;
   const goalVal = document.getElementById('task-goal-link').value;
   const goal = goalVal === '__new__' ? '' : goalVal;
   const label = _getModalLabel('task-label-opts');
@@ -1795,11 +1807,21 @@ function renderTasks() {
   const sortFn = {
     priority:    (a,b) => ({'high':0,'med':1,'low':2,'optional':3}[a.priority]??1) - ({'high':0,'med':1,'low':2,'optional':3}[b.priority]??1),
     due_soonest: (a,b) => {
-      if(a.daysUntilDue<0&&b.daysUntilDue>=0)return 1;
-      if(a.daysUntilDue>=0&&b.daysUntilDue<0)return -1;
-      return a.daysUntilDue-b.daysUntilDue;
+      const ad=a.daysUntilDue, bd=b.daysUntilDue;
+      const aNull=ad===null||ad===undefined, bNull=bd===null||bd===undefined;
+      if(aNull&&bNull)return 0;
+      if(aNull)return 1; if(bNull)return -1;
+      if(ad<0&&bd>=0)return 1;
+      if(ad>=0&&bd<0)return -1;
+      return ad-bd;
     },
-    overdue: (a,b) => a.daysUntilDue-b.daysUntilDue,
+    overdue: (a,b) => {
+      const ad=a.daysUntilDue, bd=b.daysUntilDue;
+      const aNull=ad===null||ad===undefined, bNull=bd===null||bd===undefined;
+      if(aNull&&bNull)return 0;
+      if(aNull)return 1; if(bNull)return -1;
+      return ad-bd;
+    },
   };
   if (sortFn[taskSort]) { undone.sort(sortFn[taskSort]); done.sort(sortFn[taskSort]); }
 
@@ -1830,15 +1852,17 @@ function renderTasks() {
 }
 
 function taskRowHTML(t) {
-  const d=t.daysUntilDue ?? 0;
+  const d=t.daysUntilDue;
+  const hasDue = d !== null && d !== undefined;
   let dueTxt,dueCls;
   if(t.done){dueTxt='done ✓';dueCls='due-done';}
+  else if(!hasDue){dueTxt='no due date';dueCls='due-ok';}
   else if(d<0){dueTxt=`${Math.abs(d)}d overdue`;dueCls='due-over';}
   else if(d===0){dueTxt='due today';dueCls='due-today';}
   else if(d===1){dueTxt='due tomorrow';dueCls='due-soon';}
   else{dueTxt=`due in ${d}d`;dueCls='due-ok';}
   const pColors={high:'var(--pink)',med:'var(--amber)',low:'var(--teal)',optional:'var(--text3)'};
-  const overdue=!t.done&&d<0?`<span class="overdue-badge">${Math.abs(d)}d late</span>`:'';
+  const overdue=!t.done&&hasDue&&d<0?`<span class="overdue-badge">${Math.abs(d)}d late</span>`:'';
   const inDaily = dailyTaskIds.has(t.id);
   return `<div class="task-row" data-id="${t.id}" data-type="task" draggable="true">
     <div class="drag-handle" title="Drag to reorder">⠿</div>    <div class="pdot" style="background:${pColors[t.priority]};margin-top:4px"></div>
@@ -1922,8 +1946,10 @@ function renderDailyTasks() {
     const isPinned = pinnedTaskIds.has(t.id);
     const pColors = {high:'var(--pink)',med:'var(--amber)',low:'var(--teal)',optional:'var(--text3)'};
     const d = t.daysUntilDue;
+    const hasDue = d !== null && d !== undefined;
     let dueTxt, dueCls;
     if(t.done)     {dueTxt='done ✓';         dueCls='due-done';}
+    else if(!hasDue){dueTxt='no due date';   dueCls='due-ok';}
     else if(d<0)   {dueTxt=`${Math.abs(d)}d overdue`; dueCls='due-over';}
     else if(d===0) {dueTxt='due today';       dueCls='due-today';}
     else if(d===1) {dueTxt='due tomorrow';    dueCls='due-soon';}
@@ -3484,12 +3510,10 @@ function _initDrag(container, type) {
     row.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', _dragSrcId);
-    // Auto-switch to default sort
-    if (type === 'habit' && habitSort !== 'default') {
-      habitSort = 'default';
+    // Auto-switch to manual sort so drag order is preserved
+    if (type === 'habit' && habitSort !== 'manual') {
+      habitSort = 'manual';
       document.querySelectorAll('#page-habits .sort-chip').forEach(c => c.classList.remove('active'));
-      const defChip = document.querySelector('#page-habits .sort-chip');
-      if (defChip) defChip.classList.add('active');
     }
     if (type === 'task') {
       taskSort = 'priority';
@@ -3553,12 +3577,10 @@ function _initDrag(container, type) {
     touchClone.style.cssText = `position:fixed;left:${row.getBoundingClientRect().left}px;top:${row.getBoundingClientRect().top}px;width:${row.offsetWidth}px;opacity:0.75;z-index:9999;pointer-events:none;background:var(--surf2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4)`;
     document.body.appendChild(touchClone);
     row.classList.add('dragging');
-    // Auto-switch sort
-    if (type === 'habit' && habitSort !== 'default') {
-      habitSort = 'default';
+    // Auto-switch to manual sort so drag order is preserved
+    if (type === 'habit' && habitSort !== 'manual') {
+      habitSort = 'manual';
       document.querySelectorAll('#page-habits .sort-chip').forEach(c => c.classList.remove('active'));
-      const defChip = document.querySelector('#page-habits .sort-chip');
-      if (defChip) defChip.classList.add('active');
     }
     e.preventDefault();
   }, {passive:false});
