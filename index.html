@@ -442,6 +442,13 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <!-- CONTENT -->
     <div class="content" id="content">
 
+    <!-- MANTRA BANNER -->
+    <div id="mantra-banner" style="display:none;padding:12px 14px;background:linear-gradient(135deg,rgba(124,95,230,0.08),rgba(240,109,176,0.06));border:1px solid rgba(157,127,245,0.2);border-radius:10px;margin-bottom:14px;align-items:center;gap:10px">
+      <div onclick="cycleMantra(-1)" style="flex-shrink:0;cursor:pointer;color:var(--text3);font-size:1.125rem;padding:4px 6px;user-select:none" title="Previous">‹</div>
+      <div id="mantra-text" style="flex:1;text-align:center;font-size:0.875rem;color:var(--text2);line-height:1.5;font-style:italic;min-width:0"></div>
+      <div onclick="cycleMantra(1)" style="flex-shrink:0;cursor:pointer;color:var(--text3);font-size:1.125rem;padding:4px 6px;user-select:none" title="Next">›</div>
+    </div>
+
     <!-- GOALS -->
     <div id="vacation-banner" style="display:none;padding:12px 16px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);border-radius:10px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:#eab308;text-align:center">
       ⛺ <strong>Vacation Mode is ON</strong> — habits are paused and streaks are frozen. Turn off in Settings.
@@ -670,8 +677,78 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         </div>
       </div>
       <div class="card">
+        <div class="card-title">// my exercises
+          <button class="add-btn" onclick="openCustomExercise()">+ New Exercise</button>
+        </div>
+        <div id="custom-ex-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">// build a routine
+          <button class="add-btn" onclick="openRoutineBuilder()">+ New Routine</button>
+        </div>
+        <div style="font-size:0.6875rem;color:var(--text3);line-height:1.5">Mix built-in and your own exercises into a custom routine. Saved routines appear in the list above.</div>
+      </div>
+      <div class="card">
         <div class="card-title">// session history</div>
         <div id="posture-history"></div>
+      </div>
+    </div>
+
+    <!-- CUSTOM EXERCISE MODAL -->
+    <div class="modal-overlay" id="modal-custom-ex">
+      <div class="modal">
+        <div class="modal-title" id="custom-ex-title">New Exercise
+          <button class="modal-close" onclick="closeModal('custom-ex')">✕</button>
+        </div>
+        <div class="modal-section">Name</div>
+        <input class="field-input" id="cx-name" placeholder="e.g. Band Face Pull">
+        <div class="modal-section">Description / Form Cue</div>
+        <textarea class="field-input" id="cx-cue" placeholder="How to perform it, what to focus on…" style="min-height:70px;resize:vertical;font-family:inherit;line-height:1.5"></textarea>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div class="modal-section">Type</div>
+            <select class="field-input" id="cx-type" onchange="_cxTypeChange()">
+              <option value="reps">Reps</option>
+              <option value="hold">Hold (seconds)</option>
+              <option value="breath">Breaths</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <div class="modal-section">Sets</div>
+            <input class="field-input" id="cx-sets" type="number" min="1" max="10" value="2">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div class="modal-section"><span id="cx-reps-label">Reps</span></div>
+            <input class="field-input" id="cx-reps" type="number" min="1" value="10">
+          </div>
+          <div style="flex:1">
+            <div class="modal-section">Rest (sec)</div>
+            <input class="field-input" id="cx-rest" type="number" min="0" value="45">
+          </div>
+        </div>
+        <div class="modal-section">Focus tag <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
+        <input class="field-input" id="cx-focus" placeholder="e.g. Strength, Mobility, Stretch">
+        <button class="modal-save" onclick="saveCustomExercise()">Save Exercise</button>
+        <button id="cx-delete" onclick="deleteCustomExercise()" style="display:none;width:100%;margin-top:8px;padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#ef4444;font-size:0.8125rem;cursor:pointer;font-family:'Exo 2',sans-serif">Delete Exercise</button>
+      </div>
+    </div>
+
+    <!-- ROUTINE BUILDER MODAL -->
+    <div class="modal-overlay" id="modal-routine-builder">
+      <div class="modal">
+        <div class="modal-title" id="rb-title">Build a Routine
+          <button class="modal-close" onclick="closeModal('routine-builder')">✕</button>
+        </div>
+        <div class="modal-section">Routine Name</div>
+        <input class="field-input" id="rb-name" placeholder="e.g. My Morning Set">
+        <div class="modal-section">Selected Exercises <span id="rb-count" style="color:var(--text3);font-size:0.6875rem"></span></div>
+        <div id="rb-selected" style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px"></div>
+        <div class="modal-section">Add Exercises</div>
+        <div id="rb-library" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;scrollbar-width:thin"></div>
+        <button class="modal-save" onclick="saveCustomRoutine()">Save Routine</button>
+        <button id="rb-delete" onclick="deleteCustomRoutine()" style="display:none;width:100%;margin-top:8px;padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#ef4444;font-size:0.8125rem;cursor:pointer;font-family:'Exo 2',sans-serif">Delete Routine</button>
       </div>
     </div>
 
@@ -983,6 +1060,14 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   <div class="modal">
     <div class="modal-title">Settings<button class="modal-close" onclick="closeModal('settings')">✕</button></div>
 
+    <div class="modal-section">Mantras &amp; Reminders</div>
+    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">Shown at the top of the app — a random one on load, tap ‹ › to cycle.</div>
+    <div id="settings-mantras" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px">
+      <input class="field-input" id="mantra-input" placeholder="e.g. Progress over perfection" style="flex:1" onkeydown="if(event.key==='Enter')addMantra()">
+      <button class="opt-btn active" onclick="addMantra()" style="white-space:nowrap">+ Add</button>
+    </div>
+
     <div class="modal-section">Labels (shared across habits &amp; tasks)</div>
     <div id="labels-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
     <div style="display:flex;gap:6px">
@@ -1175,6 +1260,52 @@ function showToast(msg) {
 }
 
 let labels = ['Work','Gamedev','Health','Personal','Finance','Creative'];
+let mantras = [];
+let _mantraIdx = 0;
+
+function renderMantraBanner() {
+  const banner = document.getElementById('mantra-banner');
+  if (!banner) return;
+  if (!mantras.length) { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  if (_mantraIdx >= mantras.length) _mantraIdx = 0;
+  document.getElementById('mantra-text').textContent = mantras[_mantraIdx];
+}
+
+function cycleMantra(dir) {
+  if (!mantras.length) return;
+  _mantraIdx = (_mantraIdx + dir + mantras.length) % mantras.length;
+  renderMantraBanner();
+}
+
+function _renderSettingsMantras() {
+  const el = document.getElementById('settings-mantras');
+  if (!el) return;
+  el.innerHTML = mantras.length ? mantras.map((m, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surf);border:1px solid var(--border);border-radius:8px">
+      <div style="flex:1;font-size:0.8125rem;color:var(--text2);line-height:1.4">${m.replace(/</g,'&lt;')}</div>
+      <span onclick="removeMantra(${i})" style="cursor:pointer;color:var(--text3);font-size:1rem;flex-shrink:0" title="Remove">×</span>
+    </div>`).join('') : `<div style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace">No mantras yet. Add one below.</div>`;
+}
+
+function addMantra() {
+  const inp = document.getElementById('mantra-input');
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) return;
+  mantras.push(val);
+  inp.value = '';
+  _renderSettingsMantras();
+  renderMantraBanner();
+  cloudSave();
+}
+
+function removeMantra(i) {
+  mantras.splice(i, 1);
+  _renderSettingsMantras();
+  renderMantraBanner();
+  cloudSave();
+}
 let _habitLabelFilter = 'all';
 let _taskLabelFilter  = 'all';
 
@@ -2374,7 +2505,7 @@ function _addSessionToLog(task, goal, mins) {
   // Award linked current XP
   if (goal) {
     const g = goals.find(x => x.name === goal);
-    if (g) { g.xp = Math.min(g.xp + xp, g.xpNext); renderGoals(); cloudSave(); }
+    if (g) { _addCurrentXP(g, xp); renderGoals(); cloudSave(); }
   }
   const item = document.createElement('div');
   item.className = 'slog-item';
@@ -2435,7 +2566,7 @@ function saveCheckinNew(){
   if(cnt===3){_addXP(50,null);_awardEnergyCurrentXP();showToast('3 check-ins complete! +50 XP 🎉');}
   renderCheckinLog();closeModal('checkin');cloudSave();
 }
-function _awardEnergyCurrentXP(){const g=goals.find(g2=>g2.name==='Energy Level Check-in');if(g){g.xp=Math.min((g.xp||0)+100,g.xpNext||1000);renderGoals();}}
+function _awardEnergyCurrentXP(){const g=goals.find(g2=>g2.name==='Energy Level Check-in');if(g){_addCurrentXP(g,100);renderGoals();}}
 function renderCheckinLog(){const el=document.getElementById('checkin-log');if(!el)return;const today=energyCheckins.filter(c=>c.date===_todayStr());const dots=document.getElementById('checkin-goal-dots');if(dots)dots.innerHTML=[0,1,2].map(i=>`<div style="width:10px;height:10px;border-radius:50%;background:${i<today.length?'var(--teal)':'var(--surf3)'};transition:background 0.3s"></div>`).join('');if(!today.length){el.innerHTML='<div style="font-size:0.75rem;color:var(--text3);font-family:var(--mono);text-align:center;padding:16px">No check-ins yet today. Tap + Log Check-in.</div>';return;}const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};el.innerHTML=today.map(c=>{const lv=ENERGY_LEVELS[c.level]||ENERGY_LEVELS[2];const chips=c.factors.map(f=>{const def=energyFactors.find(ef=>ef.name===f);const col=def?tc[def.type]:'var(--text3)';const ad=def&&def.allDay?' 📌':'';return`<span style="padding:2px 8px;border-radius:10px;font-size:0.625rem;color:${col};background:${col}18;border:1px solid ${col}40;font-family:'Share Tech Mono',monospace">${f}${ad}</span>`;}).join('');return`<div style="padding:12px;background:var(--surf);border:1px solid ${lv.col}30;border-left:3px solid ${lv.col};border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:1.25rem">${lv.icon}</span><div style="flex:1"><div style="font-size:0.875rem;font-weight:600;color:${lv.col};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${c.timeStr}</div></div></div><div style="font-size:0.6875rem;color:var(--text3);margin-bottom:${chips?'8px':'0'};line-height:1.5">${lv.desc}</div>${chips?`<div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>`:''}</div>`;}).join('');}
 function toggleFactor(slot,factor){}
 function selEnergy(el,slot){}
@@ -2701,6 +2832,7 @@ function prepSettingsModal() {
   if (importStatus) importStatus.textContent = '';
   _renderSettingsFactors();
   _renderSettingsLabels();
+  _renderSettingsMantras();
   // Load Signal API key
   const keyInput = document.getElementById('signal-api-key-input');
   if (keyInput) keyInput.value = localStorage.getItem('uc-signal-key') || '';
@@ -2937,11 +3069,30 @@ function _addXP(amount, sourceEl) {
   _showXPPopup(amount, sourceEl);
 }
 
+function _addCurrentXP(g, xpAmount) {
+  // Adds XP to a Current, handling level-ups with rollover
+  if (!g) return false;
+  g.xp = (g.xp||0) + xpAmount;
+  g.xpNext = g.xpNext || 1000;
+  g.level = g.level || 1;
+  let leveled = false;
+  while (g.xp >= g.xpNext) {
+    g.xp -= g.xpNext;
+    g.level++;
+    leveled = true;
+  }
+  if (leveled) {
+    showToast(`${g.name} reached Level ${g.level}!`);
+    playLevelUpSound();
+  }
+  return leveled;
+}
+
 function _awardLinkedCurrentXP(goalName, xpAmount) {
   if (!goalName) return;
   const g = goals.find(x => x.name === goalName);
   if (g) {
-    g.xp = Math.min((g.xp||0) + xpAmount, g.xpNext||1000);
+    _addCurrentXP(g, xpAmount);
     renderGoals();
     cloudSave();
   }
@@ -3138,12 +3289,12 @@ function _doCloudSave() {
   _setSyncBar('↑ Saving…', 'rgba(157,127,245,0.15)');
   const raw = {
     goals, habits, tasks, quotes,
-    labels, totalXP,
+    labels, mantras, totalXP,
     lastSeenLevel: _lastLevel,
     energyFactors, energyCheckins, checkinState,
     signalConversations, signalLastMorning: _signalLastMorning, signalLastEvening: _signalLastEvening,
     signalApiKey: localStorage.getItem('uc-signal-key') || '',
-    postureLog,
+    postureLog, customExercises, customRoutines, _nextCustomExId, _nextCustomRoutineId,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
@@ -3185,6 +3336,7 @@ function _loadFromCloud(uid) {
         tasks            = d.tasks            ?? [];
         quotes           = d.quotes           ?? [];
         labels           = Array.isArray(d.labels) ? d.labels : labels;
+        mantras          = Array.isArray(d.mantras) ? d.mantras : [];
         if (d.totalXP !== undefined) totalXP = d.totalXP;
         // Restore lastSeenLevel so level-up popup doesn't re-fire on other devices
         if (d.lastSeenLevel !== undefined) _lastLevel = d.lastSeenLevel;
@@ -3194,6 +3346,10 @@ function _loadFromCloud(uid) {
         _signalLastEvening  = d.signalLastEvening || '';
         if (d.signalApiKey) localStorage.setItem('uc-signal-key', d.signalApiKey);
         postureLog = Array.isArray(d.postureLog) ? d.postureLog : [];
+        customExercises = (d.customExercises && typeof d.customExercises==='object') ? d.customExercises : {};
+        customRoutines = Array.isArray(d.customRoutines) ? d.customRoutines : [];
+        if (d._nextCustomExId) _nextCustomExId = d._nextCustomExId;
+        if (d._nextCustomRoutineId) _nextCustomRoutineId = d._nextCustomRoutineId;
         // Handle legacy energyFactors (strings) vs new schema (objects)
         if (Array.isArray(d.energyFactors) && d.energyFactors.length > 0) {
           if (typeof d.energyFactors[0] === 'string') {
@@ -3276,6 +3432,8 @@ function _rebuildAll() {
   renderTasks(); renderDailyTasks(); buildCalendar();
   renderCheckinLog();
   renderPosture();
+  if (mantras.length) _mantraIdx = Math.floor(Math.random()*mantras.length);
+  renderMantraBanner();
   _renderLabelFilterChips();
   _updateVacationUI();
   renderTrends(); updateXPBar();
@@ -3733,7 +3891,15 @@ const PX_ROUTINES = [
     ex:['sternum_lift','brugger','breath_3d','posture_hold'] },
 ];
 
+// Merged exercise/routine accessors (built-in + custom)
+function _pxEx(key){ return PX_EXERCISES[key] || customExercises[key] || null; }
+function _pxAllRoutines(){ return [...PX_ROUTINES, ...customRoutines]; }
+
 let postureLog = [];
+let customExercises = {};   // {id: {name,cue,sets,reps,type,rest,focus,kit,custom:true}}
+let customRoutines = [];    // [{id,name,desc,ex:[keys],custom:true}]
+let _nextCustomExId = 1, _nextCustomRoutineId = 1;
+let _builderEx = [];        // working list of exercise keys for the routine builder
 let _pxRoutine=null, _pxIdx=0, _pxSet=1, _pxTimer=null, _pxTimeLeft=0, _pxStart=0, _pxRunning=false, _pxResting=false;
 
 function renderPosture() {
@@ -3761,13 +3927,13 @@ function renderPosture() {
       <div style="font-size:1.25rem;font-weight:700;color:var(--teal);font-family:'Rajdhani',sans-serif">${postureLog.length}</div>
       <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">total</div></div>`;
 
-  document.getElementById('routine-list').innerHTML = PX_ROUTINES.map(r=>{
+  document.getElementById('routine-list').innerHTML = _pxAllRoutines().map(r=>{
     const done = postureLog.some(s=>s.date===today && s.routineId===r.id);
-    const totalSets = r.ex.reduce((a,k)=>a+(PX_EXERCISES[k].sets||1),0);
-    return `<div onclick="startPostureSession('${r.id}')" style="padding:12px 14px;background:var(--surf);border:1px solid ${done?'rgba(45,212,191,0.3)':'var(--border)'};border-radius:10px;cursor:pointer">
+    const totalSets = r.ex.reduce((a,k)=>a+((_pxEx(k)?.sets)||1),0);
+    return `<div style="padding:12px 14px;background:var(--surf);border:1px solid ${done?'rgba(45,212,191,0.3)':r.custom?'rgba(157,127,245,0.25)':'var(--border)'};border-radius:10px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-        <div style="min-width:0;flex:1">
-          <div style="font-size:0.875rem;color:var(--text);font-weight:600;font-family:'Rajdhani',sans-serif;letter-spacing:0.3px">${r.name} ${done?'<span style="color:var(--teal);font-size:0.75rem">✓</span>':''}</div>
+        <div style="min-width:0;flex:1;cursor:pointer" onclick="startPostureSession('${r.id}')">
+          <div style="font-size:0.875rem;color:var(--text);font-weight:600;font-family:'Rajdhani',sans-serif;letter-spacing:0.3px">${r.name} ${done?'<span style="color:var(--teal);font-size:0.75rem">✓</span>':''}${r.custom?' <span style="color:var(--purple);font-size:0.5625rem">custom</span>':''}</div>
           <div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:3px">${r.desc}</div>
           <div style="font-size:0.5625rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-top:5px;opacity:0.8">${r.src}</div>
         </div>
@@ -3775,10 +3941,12 @@ function renderPosture() {
           <div style="font-size:0.75rem;color:var(--purple);font-family:'Share Tech Mono',monospace">${r.mins} min</div>
           <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${r.ex.length} moves</div>
           <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${totalSets} sets</div>
-          <div style="font-size:0.5625rem;color:var(--amber);font-family:'Share Tech Mono',monospace;margin-top:3px">${r.freq}</div>
+          ${r.custom?`<div onclick="event.stopPropagation();openRoutineBuilder('${r.id}')" style="font-size:0.5625rem;color:var(--cyan);font-family:'Share Tech Mono',monospace;margin-top:3px;cursor:pointer">edit ✎</div>`:`<div style="font-size:0.5625rem;color:var(--amber);font-family:'Share Tech Mono',monospace;margin-top:3px">${r.freq}</div>`}
         </div>
       </div></div>`;
   }).join('');
+
+  renderCustomExercises();
 
   const hist = document.getElementById('posture-history');
   const recent = [...postureLog].reverse().slice(0,12);
@@ -3791,7 +3959,7 @@ function renderPosture() {
 }
 
 function startPostureSession(rid) {
-  _pxRoutine = PX_ROUTINES.find(r=>r.id===rid);
+  _pxRoutine = _pxAllRoutines().find(r=>r.id===rid);
   if (!_pxRoutine) return;
   _pxIdx=0; _pxSet=1; _pxResting=false; _pxStart=Date.now();
   document.getElementById('px-routine-name').textContent = _pxRoutine.name;
@@ -3799,16 +3967,16 @@ function startPostureSession(rid) {
   _pxRenderStep();
 }
 
-function _pxTotalSets(){ return _pxRoutine.ex.reduce((a,k)=>a+(PX_EXERCISES[k].sets||1),0); }
+function _pxTotalSets(){ return _pxRoutine.ex.reduce((a,k)=>a+((_pxEx(k)?.sets)||1),0); }
 function _pxSetsDone(){
   let n=0;
-  for(let i=0;i<_pxIdx;i++) n+=PX_EXERCISES[_pxRoutine.ex[i]].sets||1;
+  for(let i=0;i<_pxIdx;i++) n+=(_pxEx(_pxRoutine.ex[i])?.sets)||1;
   return n+(_pxSet-1);
 }
 
 function _pxRenderStep() {
   if (_pxIdx >= _pxRoutine.ex.length) return _pxFinish();
-  const ex = PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+  const ex = _pxEx(_pxRoutine.ex[_pxIdx]);
   const total=_pxTotalSets(), done=_pxSetsDone();
 
   document.getElementById('px-progress-lbl').textContent =
@@ -3853,9 +4021,9 @@ function _pxRenderStep() {
 
 function _pxRenderRest(seconds) {
   _pxResting=true; _pxTimeLeft=seconds;
-  const ex=PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+  const ex=_pxEx(_pxRoutine.ex[_pxIdx]);
   const nextLbl = _pxSet<=ex.sets ? `${ex.name} · set ${_pxSet}` :
-    (_pxIdx+1<_pxRoutine.ex.length ? PX_EXERCISES[_pxRoutine.ex[_pxIdx+1]].name : 'Finish');
+    (_pxIdx+1<_pxRoutine.ex.length ? _pxEx(_pxRoutine.ex[_pxIdx+1]).name : 'Finish');
   document.getElementById('px-body').innerHTML=`
     <div style="text-align:center;padding:26px 8px">
       <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:10px">REST</div>
@@ -3890,7 +4058,7 @@ function _pxToggleTimer() {
 
 function _pxNextSet() {
   clearInterval(_pxTimer); _pxRunning=false;
-  const ex=PX_EXERCISES[_pxRoutine.ex[_pxIdx]];
+  const ex=_pxEx(_pxRoutine.ex[_pxIdx]);
   if (_pxSet < ex.sets) {
     _pxSet++;
     _pxRenderRest(ex.rest||45);
@@ -3904,7 +4072,7 @@ function _pxNextSet() {
 function _pxPrev() {
   clearInterval(_pxTimer); _pxRunning=false; _pxResting=false;
   if (_pxSet>1) _pxSet--;
-  else if (_pxIdx>0){ _pxIdx--; _pxSet=PX_EXERCISES[_pxRoutine.ex[_pxIdx]].sets; }
+  else if (_pxIdx>0){ _pxIdx--; _pxSet=_pxEx(_pxRoutine.ex[_pxIdx]).sets; }
   _pxRenderStep();
 }
 
@@ -3933,6 +4101,171 @@ function _pxFinish() {
 
 function exitPostureSession(){ clearInterval(_pxTimer); _pxRunning=false; _pxResting=false;
   document.getElementById('posture-overlay').style.display='none'; }
+
+// ── CUSTOM EXERCISES ──────────────────────────────────────
+let _editingCustomEx = null;
+
+function renderCustomExercises() {
+  const el = document.getElementById('custom-ex-list');
+  if (!el) return;
+  const keys = Object.keys(customExercises);
+  el.innerHTML = keys.length ? keys.map(k => {
+    const ex = customExercises[k];
+    const unit = ex.type==='reps'?`${ex.reps} reps`:ex.type==='hold'?`${ex.reps}s hold`:`${ex.reps} breaths`;
+    return `<div onclick="openCustomExercise('${k}')" style="padding:10px 12px;background:var(--surf);border:1px solid var(--border);border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div style="min-width:0">
+        <div style="font-size:0.8125rem;color:var(--text);font-weight:600">${ex.name}</div>
+        ${ex.focus?`<div style="font-size:0.625rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin-top:2px">${ex.focus}</div>`:''}
+      </div>
+      <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;text-align:right;flex-shrink:0">${ex.sets} × ${unit}<br>${ex.rest}s rest</div>
+    </div>`;
+  }).join('') : `<div style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace">No custom exercises yet.</div>`;
+}
+
+function _cxTypeChange() {
+  const t = document.getElementById('cx-type').value;
+  document.getElementById('cx-reps-label').textContent = t==='reps'?'Reps':t==='hold'?'Seconds':'Breaths';
+}
+
+function openCustomExercise(key) {
+  _editingCustomEx = key || null;
+  const ex = key ? customExercises[key] : null;
+  document.getElementById('custom-ex-title').firstChild.textContent = ex ? 'Edit Exercise' : 'New Exercise';
+  document.getElementById('cx-name').value = ex ? ex.name : '';
+  document.getElementById('cx-cue').value = ex ? ex.cue : '';
+  document.getElementById('cx-type').value = ex ? ex.type : 'reps';
+  document.getElementById('cx-sets').value = ex ? ex.sets : 2;
+  document.getElementById('cx-reps').value = ex ? ex.reps : 10;
+  document.getElementById('cx-rest').value = ex ? ex.rest : 45;
+  document.getElementById('cx-focus').value = ex ? (ex.focus||'') : '';
+  document.getElementById('cx-delete').style.display = ex ? 'block' : 'none';
+  _cxTypeChange();
+  openModal('custom-ex');
+}
+
+function saveCustomExercise() {
+  const name = document.getElementById('cx-name').value.trim();
+  if (!name) { showToast('Give it a name'); return; }
+  const data = {
+    name,
+    cue: document.getElementById('cx-cue').value.trim() || 'No description.',
+    type: document.getElementById('cx-type').value,
+    sets: Math.max(1, parseInt(document.getElementById('cx-sets').value)||2),
+    reps: Math.max(1, parseInt(document.getElementById('cx-reps').value)||10),
+    rest: Math.max(0, parseInt(document.getElementById('cx-rest').value)||45),
+    focus: document.getElementById('cx-focus').value.trim() || 'Custom',
+    kit: 'None',
+    tempo: 'controlled',
+    custom: true
+  };
+  const key = _editingCustomEx || ('cx_' + (_nextCustomExId++));
+  customExercises[key] = data;
+  closeModal('custom-ex');
+  renderCustomExercises();
+  cloudSave();
+}
+
+function deleteCustomExercise() {
+  if (!_editingCustomEx) return;
+  delete customExercises[_editingCustomEx];
+  // Remove from any custom routines
+  customRoutines.forEach(r => { r.ex = r.ex.filter(k => k !== _editingCustomEx); });
+  customRoutines = customRoutines.filter(r => r.ex.length > 0);
+  closeModal('custom-ex');
+  renderCustomExercises();
+  renderPosture();
+  cloudSave();
+}
+
+// ── ROUTINE BUILDER ───────────────────────────────────────
+let _editingRoutine = null;
+
+function openRoutineBuilder(rid) {
+  _editingRoutine = rid || null;
+  const r = rid ? customRoutines.find(x=>x.id===rid) : null;
+  document.getElementById('rb-title').firstChild.textContent = r ? 'Edit Routine' : 'Build a Routine';
+  document.getElementById('rb-name').value = r ? r.name : '';
+  _builderEx = r ? [...r.ex] : [];
+  document.getElementById('rb-delete').style.display = r ? 'block' : 'none';
+  _renderBuilder();
+  openModal('routine-builder');
+}
+
+function _renderBuilder() {
+  // Selected list
+  const sel = document.getElementById('rb-selected');
+  document.getElementById('rb-count').textContent = _builderEx.length ? `(${_builderEx.length})` : '';
+  sel.innerHTML = _builderEx.length ? _builderEx.map((k,i) => {
+    const ex = _pxEx(k);
+    if (!ex) return '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf);border:1px solid var(--border);border-radius:7px">
+      <span style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;flex-shrink:0">${i+1}</span>
+      <span style="flex:1;font-size:0.75rem;color:var(--text2);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex.name}</span>
+      <span onclick="_rbMove(${i},-1)" style="cursor:pointer;color:var(--text3);font-size:0.875rem;padding:0 2px">↑</span>
+      <span onclick="_rbMove(${i},1)" style="cursor:pointer;color:var(--text3);font-size:0.875rem;padding:0 2px">↓</span>
+      <span onclick="_rbRemove(${i})" style="cursor:pointer;color:#ef4444;font-size:0.875rem;padding:0 2px">×</span>
+    </div>`;
+  }).join('') : `<div style="font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace">Nothing added yet — pick from below.</div>`;
+
+  // Library — built-in grouped + custom
+  const lib = document.getElementById('rb-library');
+  const builtInKeys = Object.keys(PX_EXERCISES);
+  const customKeys = Object.keys(customExercises);
+  const row = (k, isCustom) => {
+    const ex = isCustom ? customExercises[k] : PX_EXERCISES[k];
+    const unit = ex.type==='reps'?`${ex.sets}×${ex.reps}`:ex.type==='hold'?`${ex.sets}×${ex.reps}s`:`${ex.sets}×${ex.reps}br`;
+    return `<div onclick="_rbAdd('${k}')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;cursor:pointer">
+      <span style="font-size:0.75rem;color:var(--text2);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex.name}${ex.star?' ★':''}${isCustom?' <span style="color:var(--purple);font-size:0.5625rem">custom</span>':''}</span>
+      <span style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;flex-shrink:0">${unit} · +</span>
+    </div>`;
+  };
+  let html = '';
+  if (customKeys.length) {
+    html += `<div style="font-size:0.5625rem;color:var(--purple);font-family:'Share Tech Mono',monospace;margin:4px 0 2px;letter-spacing:1px">MY EXERCISES</div>`;
+    html += customKeys.map(k=>row(k,true)).join('');
+  }
+  html += `<div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin:8px 0 2px;letter-spacing:1px">BUILT-IN</div>`;
+  html += builtInKeys.map(k=>row(k,false)).join('');
+  lib.innerHTML = html;
+}
+
+function _rbAdd(k){ _builderEx.push(k); _renderBuilder(); }
+function _rbRemove(i){ _builderEx.splice(i,1); _renderBuilder(); }
+function _rbMove(i,dir){
+  const j=i+dir;
+  if(j<0||j>=_builderEx.length)return;
+  [_builderEx[i],_builderEx[j]]=[_builderEx[j],_builderEx[i]];
+  _renderBuilder();
+}
+
+function saveCustomRoutine() {
+  const name = document.getElementById('rb-name').value.trim();
+  if (!name) { showToast('Name your routine'); return; }
+  if (!_builderEx.length) { showToast('Add at least one exercise'); return; }
+  const totalSets = _builderEx.reduce((a,k)=>a+((_pxEx(k)?.sets)||1),0);
+  const mins = Math.max(3, Math.round(totalSets * 1.2));
+  if (_editingRoutine) {
+    const r = customRoutines.find(x=>x.id===_editingRoutine);
+    if (r) { r.name=name; r.ex=[..._builderEx]; r.mins=mins; }
+  } else {
+    customRoutines.push({
+      id: 'cr_'+(_nextCustomRoutineId++),
+      name, desc:'Your custom routine', ex:[..._builderEx],
+      mins, freq:'your call', weeks:'ongoing', src:'Custom build', custom:true
+    });
+  }
+  closeModal('routine-builder');
+  renderPosture();
+  cloudSave();
+}
+
+function deleteCustomRoutine() {
+  if (!_editingRoutine) return;
+  customRoutines = customRoutines.filter(r => r.id !== _editingRoutine);
+  closeModal('routine-builder');
+  renderPosture();
+  cloudSave();
+}
 
 // ── SIGNAL AI ─────────────────────────────────────────────
 let signalConversations = []; // [{date,type,messages:[{role,content}]}]
@@ -4358,6 +4691,8 @@ buildCalendar();
 recalcStreaks();
 renderCheckinLog();
 renderPosture();
+if (mantras.length) _mantraIdx = Math.floor(Math.random()*mantras.length);
+renderMantraBanner();
 _renderLabelFilterChips();
 updateXPBar();
 _lastLevel = _calcLevel(totalXP).level;
