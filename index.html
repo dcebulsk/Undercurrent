@@ -660,8 +660,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         </div>
       </div>
       <div class="card">
-        <div class="card-title">// factor correlations · 30 days</div>
-        <div id="factor-trends" style="font-size:0.75rem;color:var(--text3);font-family:'Share Tech Mono',monospace">Log check-ins daily to see trends.</div>
+        <div class="card-title">// all check-ins · newest first</div>
+        <div id="checkin-history"></div>
       </div>
     </div>
 
@@ -775,6 +775,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <div class="modal-section">Factors</div>
         <div style="font-size:0.6875rem;color:var(--text3);margin-bottom:8px">📌 = applies all day and auto-carries forward</div>
         <div id="checkin-factor-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px"></div>
+        <div class="modal-section">Notes <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
+        <textarea class="field-input" id="checkin-notes" placeholder="What's going on right now…" style="min-height:60px;resize:vertical;font-family:inherit;line-height:1.5"></textarea>
         <button class="modal-save" onclick="saveCheckinNew()">Save Check-in</button>
       </div>
     </div>
@@ -1355,6 +1357,7 @@ function showPage(id) {
   document.getElementById('content').scrollTop = 0;
   if (id === 'review') buildReview();
   if (id === 'posture') renderPosture();
+  if (id === 'energy') renderCheckinHistory();
   if (id === 'habits') _resetToToday();
   // Pull the correct nav page into view
   if (_BNAV_PAGES[id] !== undefined) _bnavGoPage(_BNAV_PAGES[id]);
@@ -2545,8 +2548,8 @@ let energyCheckins=[];let _checkinDate='';let _pendingLevel=-1;let _pendingFacto
 let checkinState={morning:{level:-1,factors:[],saved:false},afternoon:{level:-1,factors:[],saved:false},evening:{level:-1,factors:[],saved:false}};
 function _getETTimeStr(){try{return new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});}catch(e){const n=new Date(),h=n.getHours(),m=n.getMinutes();return `${h%12||12}:${m.toString().padStart(2,'0')} ${h>=12?'PM':'AM'}`;}}
 function _getTodayAllDayFactors(){const a=new Set();energyCheckins.filter(c=>c.date===_todayStr()).forEach(c=>{c.factors.forEach(f=>{const d=energyFactors.find(ef=>ef.name===f);if(d&&d.allDay)a.add(f);});});return[...a];}
-function openCheckinModal(){_pendingLevel=-1;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
-function openCheckinModalWithLevel(levelIdx){_pendingLevel=levelIdx;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
+function openCheckinModal(){_pendingLevel=-1;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();const n=document.getElementById('checkin-notes');if(n)n.value='';_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
+function openCheckinModalWithLevel(levelIdx){_pendingLevel=levelIdx;_pendingFactors=[..._getTodayAllDayFactors()];document.getElementById('checkin-modal-time').textContent=_getETTimeStr();const n=document.getElementById('checkin-notes');if(n)n.value='';_renderEnergyLevelPicker();_renderCheckinFactorPicker();openModal('checkin');}
 function _renderEnergyLevelPicker(){const el=document.getElementById('energy-level-picker');if(!el)return;el.innerHTML=ENERGY_LEVELS.map((lv,i)=>`<div onclick="_selectEnergyLevel(${i})" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:10px;cursor:pointer;border:1px solid ${_pendingLevel===i?lv.col:'var(--border)'};background:${_pendingLevel===i?lv.col+'22':'var(--surf)'};transition:all 0.15s"><span style="font-size:1.375rem;flex-shrink:0;margin-top:1px">${lv.icon}</span><div><div style="font-size:0.875rem;font-weight:600;color:${_pendingLevel===i?lv.col:'var(--text)'};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.6875rem;color:var(--text3);line-height:1.5;margin-top:2px">${lv.desc}</div></div></div>`).join('');}
 function _selectEnergyLevel(idx){_pendingLevel=idx;_renderEnergyLevelPicker();}
 function _renderCheckinFactorPicker(){
@@ -2558,16 +2561,41 @@ function _renderCheckinFactorPicker(){
 function _toggleCheckinFactor(name){if(_pendingFactors.includes(name))_pendingFactors=_pendingFactors.filter(f=>f!==name);else _pendingFactors.push(name);_renderCheckinFactorPicker();}
 function saveCheckinNew(){
   if(_pendingLevel<0){showToast('Select an energy level first');return;}
-  const c={id:Date.now(),time:Date.now(),timeStr:_getETTimeStr(),level:_pendingLevel,factors:[..._pendingFactors],date:_todayStr()};
+  const notesEl=document.getElementById('checkin-notes');
+  const notes=notesEl?notesEl.value.trim():'';
+  const c={id:Date.now(),time:Date.now(),timeStr:_getETTimeStr(),level:_pendingLevel,factors:[..._pendingFactors],notes,date:_todayStr()};
   energyCheckins.push(c);_checkinDate=_todayStr();
   const cnt=energyCheckins.filter(x=>x.date===_todayStr()).length;
   const eg=goals.find(g2=>g2.name==='Energy Level Check-in');
   if(eg){eg.measureCurrent=cnt;renderGoals();}
   if(cnt===3){_addXP(50,null);_awardEnergyCurrentXP();showToast('3 check-ins complete! +50 XP 🎉');}
-  renderCheckinLog();closeModal('checkin');cloudSave();
+  renderCheckinLog();renderCheckinHistory();closeModal('checkin');cloudSave();
 }
 function _awardEnergyCurrentXP(){const g=goals.find(g2=>g2.name==='Energy Level Check-in');if(g){_addCurrentXP(g,100);renderGoals();}}
-function renderCheckinLog(){const el=document.getElementById('checkin-log');if(!el)return;const today=energyCheckins.filter(c=>c.date===_todayStr());const dots=document.getElementById('checkin-goal-dots');if(dots)dots.innerHTML=[0,1,2].map(i=>`<div style="width:10px;height:10px;border-radius:50%;background:${i<today.length?'var(--teal)':'var(--surf3)'};transition:background 0.3s"></div>`).join('');if(!today.length){el.innerHTML='<div style="font-size:0.75rem;color:var(--text3);font-family:var(--mono);text-align:center;padding:16px">No check-ins yet today. Tap + Log Check-in.</div>';return;}const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};el.innerHTML=today.map(c=>{const lv=ENERGY_LEVELS[c.level]||ENERGY_LEVELS[2];const chips=c.factors.map(f=>{const def=energyFactors.find(ef=>ef.name===f);const col=def?tc[def.type]:'var(--text3)';const ad=def&&def.allDay?' 📌':'';return`<span style="padding:2px 8px;border-radius:10px;font-size:0.625rem;color:${col};background:${col}18;border:1px solid ${col}40;font-family:'Share Tech Mono',monospace">${f}${ad}</span>`;}).join('');return`<div style="padding:12px;background:var(--surf);border:1px solid ${lv.col}30;border-left:3px solid ${lv.col};border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:1.25rem">${lv.icon}</span><div style="flex:1"><div style="font-size:0.875rem;font-weight:600;color:${lv.col};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${c.timeStr}</div></div></div><div style="font-size:0.6875rem;color:var(--text3);margin-bottom:${chips?'8px':'0'};line-height:1.5">${lv.desc}</div>${chips?`<div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>`:''}</div>`;}).join('');}
+function _checkinCardHTML(c,showDate){
+  const tc={positive:'#22c55e',negative:'#ef4444',neutral:'#8888aa'};
+  const lv=ENERGY_LEVELS[c.level]||ENERGY_LEVELS[2];
+  const chips=(c.factors||[]).map(f=>{const def=energyFactors.find(ef=>ef.name===f);const col=def?tc[def.type]:'var(--text3)';const ad=def&&def.allDay?' 📌':'';return`<span style="padding:2px 8px;border-radius:10px;font-size:0.625rem;color:${col};background:${col}18;border:1px solid ${col}40;font-family:'Share Tech Mono',monospace">${f}${ad}</span>`;}).join('');
+  let dateStr='';
+  if(showDate){const d=new Date(c.date+'T00:00:00');dateStr=` · ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;}
+  const notesHtml=c.notes?`<div style="font-size:0.6875rem;color:var(--text2);margin-top:6px;line-height:1.5;padding-left:8px;border-left:2px solid var(--border2);white-space:pre-wrap">${c.notes.replace(/</g,'&lt;')}</div>`:'';
+  return`<div style="padding:12px;background:var(--surf);border:1px solid ${lv.col}30;border-left:3px solid ${lv.col};border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:1.25rem">${lv.icon}</span><div style="flex:1"><div style="font-size:0.875rem;font-weight:600;color:${lv.col};font-family:'Rajdhani',sans-serif">${lv.name}</div><div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace">${c.timeStr}${dateStr}</div></div></div><div style="font-size:0.6875rem;color:var(--text3);margin-bottom:${chips?'8px':'0'};line-height:1.5">${lv.desc}</div>${chips?`<div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>`:''}${notesHtml}</div>`;
+}
+function renderCheckinLog(){
+  const el=document.getElementById('checkin-log');if(!el)return;
+  const today=energyCheckins.filter(c=>c.date===_todayStr());
+  const dots=document.getElementById('checkin-goal-dots');
+  if(dots)dots.innerHTML=[0,1,2].map(i=>`<div style="width:10px;height:10px;border-radius:50%;background:${i<today.length?'var(--teal)':'var(--surf3)'};transition:background 0.3s"></div>`).join('');
+  if(!today.length){el.innerHTML='<div style="font-size:0.75rem;color:var(--text3);font-family:var(--mono);text-align:center;padding:16px">No check-ins yet today. Tap + Log Check-in.</div>';return;}
+  el.innerHTML=today.map(c=>_checkinCardHTML(c,false)).join('');
+}
+function renderCheckinHistory(){
+  const el=document.getElementById('checkin-history');if(!el)return;
+  // All check-ins, newest first
+  const all=[...energyCheckins].sort((a,b)=>(b.time||0)-(a.time||0));
+  if(!all.length){el.innerHTML='<div style="font-size:0.75rem;color:var(--text3);font-family:\'Share Tech Mono\',monospace;text-align:center;padding:16px">No check-ins recorded yet.</div>';return;}
+  el.innerHTML=all.map(c=>_checkinCardHTML(c,true)).join('');
+}
 function toggleFactor(slot,factor){}
 function selEnergy(el,slot){}
 function saveCheckin(slot){}
@@ -3431,6 +3459,7 @@ function _rebuildAll() {
   renderGoals(); renderHabits(); recalcStreaks();
   renderTasks(); renderDailyTasks(); buildCalendar();
   renderCheckinLog();
+  renderCheckinHistory();
   renderPosture();
   if (mantras.length) _mantraIdx = Math.floor(Math.random()*mantras.length);
   renderMantraBanner();
@@ -4690,6 +4719,7 @@ renderTasks(); renderDailyTasks();
 buildCalendar();
 recalcStreaks();
 renderCheckinLog();
+renderCheckinHistory();
 renderPosture();
 if (mantras.length) _mantraIdx = Math.floor(Math.random()*mantras.length);
 renderMantraBanner();
