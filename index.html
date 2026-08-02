@@ -956,6 +956,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     </div>
     <div class="modal-section">Link to Current (optional)</div>
     <select class="field-input" id="habit-goal-link" style="cursor:pointer"></select>
+    <div class="modal-section">Notes <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
+    <textarea class="field-input" id="habit-notes-input" placeholder="Links, context, things to remember…" style="min-height:70px;resize:vertical;font-family:inherit;line-height:1.5"></textarea>
     <button class="modal-save" onclick="saveHabit()">Save Habit</button>
     <button class="modal-delete" id="habit-delete-btn" style="display:none" onclick="deleteItem('habit')">Delete Habit</button>
   </div>
@@ -1521,6 +1523,7 @@ function prepHabitModal(id) {
   const h = id ? habits.find(x=>x.id===id) : null;
   document.getElementById('habit-modal-title').textContent = h ? 'Edit Habit' : 'New Habit';
   document.getElementById('habit-name-input').value = h ? h.name : '';
+  document.getElementById('habit-notes-input').value = h ? (h.notes || '') : '';
   buildGoalDropdown('habit-goal-link', h ? h.goal : '');
   habitMissBehavior = h ? h.miss : 'rollover';
   habitStreakType = h ? h.streakType : 'daily';
@@ -1556,11 +1559,12 @@ function saveHabit() {
   const goalVal = document.getElementById('habit-goal-link').value;
   const goal = goalVal === '__new__' ? '' : goalVal;
   const label = _getModalLabel('habit-label-opts');
+  const notes = document.getElementById('habit-notes-input').value.trim();
   if (editingId !== null) {
     const h = habits.find(x=>x.id===editingId);
-    if (h) Object.assign(h,{name,diff,days,goal,miss:habitMissBehavior,streakType:habitStreakType,label});
+    if (h) Object.assign(h,{name,diff,days,goal,miss:habitMissBehavior,streakType:habitStreakType,label,notes});
   } else {
-    habits.push({id:nextHabitId++,name,diff,goal,days,streak:0,bestStreak:0,miss:habitMissBehavior,streakType:habitStreakType,consistency:0,done:false,rolloverDebt:0,streakData:[],label:label||''});
+    habits.push({id:nextHabitId++,name,diff,goal,days,streak:0,bestStreak:0,miss:habitMissBehavior,streakType:habitStreakType,consistency:0,done:false,rolloverDebt:0,streakData:[],label:label||'',notes});
   }
   closeModal('add-habit');
   renderHabits();
@@ -1680,6 +1684,7 @@ function renderHabits() {
           <span style="margin-left:6px;display:flex;gap:3px;align-items:center">${dayDots}</span>
         </div>
         ${rolloverBar}
+        ${h.notes?`<div style="margin-top:6px;font-size:0.6875rem;color:var(--text3);line-height:1.5;white-space:pre-wrap;padding-left:8px;border-left:2px solid var(--border2)">${h.notes.replace(/</g,'&lt;')}</div>`:''}
       </div>
       <div style="font-size:1.25rem;color:var(--text3);cursor:pointer;padding:2px 0 0 6px;flex-shrink:0;pointer-events:all" onclick="openModal('add-habit',${h.id})">⋯</div>
     </div>`;
