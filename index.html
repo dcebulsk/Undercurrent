@@ -200,6 +200,8 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .day-tabs::-webkit-scrollbar{display:none}
 .dtab{padding:6px 13px;font-size:0.75rem;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:1.5px;text-transform:uppercase;font-family:'Share Tech Mono',monospace;white-space:nowrap;transition:all 0.15s;user-select:none}
 .dtab.active{color:var(--purple);border-bottom-color:var(--purple)}
+.dtab.is-today{position:relative}
+.dtab.is-today::after{content:'';position:absolute;top:3px;right:5px;width:4px;height:4px;border-radius:50%;background:var(--teal)}
 
 /* ── GITHUB CALENDAR ── */
 
@@ -500,6 +502,10 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
             <div class="dtab" onclick="selDay(this,4)">Fri</div>
             <div class="dtab" onclick="selDay(this,5)">Sat</div>
             <div class="dtab" onclick="selDay(this,6)">Sun</div>
+          </div>
+          <div id="not-today-banner" style="display:none;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.25);border-radius:8px;margin-bottom:10px;font-size:0.6875rem;font-family:'Share Tech Mono',monospace;color:#eab308">
+            <span id="not-today-text">Viewing another day</span>
+            <span onclick="_resetToToday()" style="cursor:pointer;color:var(--purple);text-decoration:underline">back to today</span>
           </div>
           <div class="sort-bar">
             <span class="sort-lbl">Sort:</span>
@@ -1366,10 +1372,7 @@ function showPage(id) {
 }
 
 function _resetToToday() {
-  const todayDow = (new Date().getDay() + 6) % 7;
-  selectedDay = todayDow;
-  const tabs = document.querySelectorAll('#day-tabs .dtab');
-  tabs.forEach((t, i) => t.classList.toggle('active', i === todayDow));
+  selectedDay = (new Date().getDay() + 6) % 7;
   renderHabits();
 }
 
@@ -1572,8 +1575,6 @@ function saveHabit() {
 }
 
 function selDay(el,idx) {
-  document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
   selectedDay = idx;
   renderHabits();
 }
@@ -1599,17 +1600,41 @@ function renderHabits() {
   let list = [...habits];
   if (_habitLabelFilter !== 'all') list = list.filter(h => h.label === _habitLabelFilter);
 
-  const todayDow = (new Date().getDay() + 6) % 7;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const todayDow = (now.getDay() + 6) % 7; // Mon=0
   const isViewingToday = selectedDay === todayDow;
 
-  // Calculate the date for the selected day tab
-  const today = new Date(); today.setHours(0,0,0,0);
-  let dayDiff = selectedDay - todayDow;
-  if (dayDiff > 0) dayDiff -= 7; // always look back, not forward
-  const viewDate = new Date(today); viewDate.setDate(today.getDate() + dayDiff);
-  const viewDateKey = viewDate.toISOString().split('T')[0];
+  // Update day tabs: highlight today, mark active selection, dim future days
+  const DAY_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  document.querySelectorAll('#day-tabs .dtab').forEach((t,i)=>{
+    t.classList.toggle('active', i===selectedDay);
+    t.classList.toggle('is-today', i===todayDow);
+    t.style.opacity = i>todayDow ? '0.4' : '';
+  });
+  // Not-today warning banner
+  const banner = document.getElementById('not-today-banner');
+  if (banner) {
+    if (isViewingToday) { banner.style.display='none'; }
+    else {
+      banner.style.display='flex';
+      const isFut = selectedDay > todayDow;
+      document.getElementById('not-today-text').textContent =
+        isFut ? `Viewing ${DAY_FULL[selectedDay]} (upcoming)` : `Viewing ${DAY_FULL[selectedDay]}`;
+    }
+  }
 
-  const _isDoneFor = h => isViewingToday ? h.done : !!(h.completionLog||{})[viewDateKey];
+  // Always resolve to the CURRENT week (Monday-based).
+  // viewDate = Monday of this week + selectedDay offset.
+  const monday = new Date(now); monday.setDate(now.getDate() - todayDow);
+  const viewDate = new Date(monday); viewDate.setDate(monday.getDate() + selectedDay);
+  viewDate.setHours(0,0,0,0);
+  const viewDateKey = viewDate.toISOString().split('T')[0];
+  const isFuture = viewDate > now; // future day this week — locked
+
+  const _isDoneFor = h => {
+    if (isViewingToday) return h.done;
+    return !!(h.completionLog||{})[viewDateKey];
+  };
   const _diffRank  = h => ({'Easy':0,'Medium':1,'Hard':2}[h.diff] ?? 1);
 
   if (habitSort==='streak') list=[...list].sort((a,b)=>b.streak-a.streak);
@@ -1619,13 +1644,10 @@ function renderHabits() {
   else {
     // Default: scheduled + not done first (low→high difficulty), then done, then not scheduled
     list=[...list].sort((a,b)=>{
-      const aSched=(a.days||[]).includes(selectedDay), bSched=(b.days||[]).includes(selectedDay);
-      const aDone=_isDoneFor(a), bDone=_isDoneFor(b);
       const rank=h=>{ const s=(h.days||[]).includes(selectedDay); const d=_isDoneFor(h);
         if(s&&!d)return 0; if(s&&d)return 1; return 2; };
       const ra=rank(a), rb=rank(b);
       if(ra!==rb)return ra-rb;
-      // within same group, sort by difficulty low→high
       return _diffRank(a)-_diffRank(b);
     });
   }
@@ -1633,8 +1655,6 @@ function renderHabits() {
   document.getElementById('habit-list').innerHTML = list.map(h=>{
     const isActive = (h.days||[]).includes(selectedDay);
     const inactive = !isActive;
-
-    // Determine done state for the viewed day
     const isDone = _isDoneFor(h);
 
     const missedYesterday = isViewingToday ? _habitMissedYesterday(h) : false;
@@ -1653,10 +1673,12 @@ function renderHabits() {
         <div style="background:var(--surf3);border-radius:3px;height:4px"><div style="width:0%;height:4px;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--pink))"></div></div>
       </div>`:'';
 
-    const canToggle = isViewingToday && isActive;
+    // Can toggle any active, non-future day in this week
+    const canToggle = isActive && !isFuture;
     const inactiveOverlay = inactive ? `style="opacity:0.35"` : '';
     const inactiveBadge   = inactive ? `<span class="badge" style="background:rgba(100,100,120,0.15);border-color:rgba(100,100,120,0.3);color:var(--text3);font-size:0.5625rem">not scheduled</span>` : '';
-    const pastDayBadge    = !isViewingToday && isActive ? `<span class="badge" style="background:rgba(157,127,245,0.1);border-color:rgba(157,127,245,0.2);color:var(--purple);font-size:0.5625rem">${isDone?'✓ completed':'✗ missed'}</span>` : '';
+    const pastDayBadge    = !isViewingToday && !isFuture && isActive ? `<span class="badge" style="background:rgba(157,127,245,0.1);border-color:rgba(157,127,245,0.2);color:var(--purple);font-size:0.5625rem">${isDone?'✓ done':'not done'}</span>` : '';
+    const futureBadge     = isFuture && isActive ? `<span class="badge" style="background:rgba(100,100,120,0.12);border-color:rgba(100,100,120,0.25);color:var(--text3);font-size:0.5625rem">upcoming</span>` : '';
     const warningCls = isWarning ? ' missed-warning' : '';
 
     return `<div class="habit-row${warningCls}" data-id="${h.id}" data-type="habit" draggable="true" ${inactiveOverlay}>
@@ -1675,6 +1697,7 @@ function renderHabits() {
           ${isWarning?`<span class="nmt-badge">⚠ missed yesterday</span>`:''}
           ${inactiveBadge}
           ${pastDayBadge}
+          ${futureBadge}
           ${isActive&&isViewingToday?`<span class="badge ${h.miss==='rollover'?'bd-ro':'bd-rs'}">${h.miss==='rollover'?'↩ rollover':'✕ reset'}</span>`:''}
           ${isActive&&isViewingToday?`<span class="mult-badge">${getMult(h.consistency)}×</span>`:''}
         </div>
@@ -1704,20 +1727,34 @@ function toggleHabit(id, sourceEl) {
   if (vacation) { showToast('Habits paused — vacation mode is on'); return; }
   const h = habits.find(x=>x.id===id);
   if (!h) return;
-  h.done = !h.done;
-  if (h.done && h.rolloverDebt>0) h.rolloverDebt=0;
-  const today = _todayStr();
+
+  // Resolve the currently-viewed date (current week, Monday-based)
+  const now = new Date(); now.setHours(0,0,0,0);
+  const todayDow = (now.getDay() + 6) % 7;
+  const monday = new Date(now); monday.setDate(now.getDate() - todayDow);
+  const viewDate = new Date(monday); viewDate.setDate(monday.getDate() + selectedDay);
+  viewDate.setHours(0,0,0,0);
+  const viewKey = viewDate.toISOString().split('T')[0];
+  const isToday = selectedDay === todayDow;
+  if (viewDate > now) { showToast("Can't complete a future day"); return; }
+
   if (!h.completionLog) h.completionLog = {};
-  if (h.done) {
-    h.completionLog[today] = true;
-    habitCompletions[today] = (habitCompletions[today] || 0) + 1;
+  const wasDone = isToday ? h.done : !!h.completionLog[viewKey];
+  const nowDone = !wasDone;
+
+  if (isToday) h.done = nowDone;
+
+  if (nowDone) {
+    h.completionLog[viewKey] = true;
+    habitCompletions[viewKey] = (habitCompletions[viewKey] || 0) + 1;
+    if (h.rolloverDebt>0 && isToday) h.rolloverDebt=0;
     const xpAmt = XP_HABIT[h.diff] || 30;
     _addXP(xpAmt, sourceEl);
     playHabitTaskSound();
     _awardLinkedCurrentXP(h.goal, xpAmt);
   } else {
-    delete h.completionLog[today];
-    habitCompletions[today] = Math.max(0, (habitCompletions[today] || 1) - 1);
+    delete h.completionLog[viewKey];
+    habitCompletions[viewKey] = Math.max(0, (habitCompletions[viewKey] || 1) - 1);
     _removeXP(XP_HABIT[h.diff] || 30);
   }
   recalcStreaks();
@@ -4717,9 +4754,6 @@ if (!goals.find(g => g.name === 'Energy Level Check-in')) {
 renderGoals();
 renderHabits();
 recalcStreaks();
-// Activate today's day tab
-const dayTabs = document.querySelectorAll('#day-tabs .dtab');
-if (dayTabs[selectedDay]) dayTabs[selectedDay].classList.add('active');
 renderTasks(); renderDailyTasks();
 buildCalendar();
 recalcStreaks();
