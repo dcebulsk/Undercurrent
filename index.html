@@ -223,7 +223,11 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .task-row{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);transition:opacity 0.15s,background 0.15s}
 .drag-handle{font-size:1.125rem;color:var(--border2);cursor:grab;padding:2px 2px 0 0;flex-shrink:0;touch-action:none;user-select:none;line-height:1;letter-spacing:-1px}
 .drag-handle:active{cursor:grabbing;color:var(--purple)}
-.habit-row.has-lbl,.task-row.has-lbl,.daily-row.has-lbl{border-left:3px solid var(--lc);padding-left:8px}
+.habit-row.has-lbl,.task-row.has-lbl,.daily-row.has-lbl{position:relative;padding-left:11px;background:var(--ltint)}
+.habit-row.has-lbl::before,.task-row.has-lbl::before,.daily-row.has-lbl::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--lbar)}
+.habit-row.missed-warning.has-lbl::before{display:none}
+.goal-card.has-gc::before{background:var(--gc)}
+.goal-card.has-gc{border-color:color-mix(in srgb,var(--gc) 30%,transparent)}
 .lbl-badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:0.625rem;font-family:'Share Tech Mono',monospace;color:var(--lc);background:color-mix(in srgb,var(--lc) 14%,transparent);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent)}
 .habit-row.missed-warning{border-left:3px solid #ef4444;background:rgba(239,68,68,0.06)}
 .habit-row.missed-warning .habit-name{color:#ef4444}
@@ -1289,37 +1293,78 @@ function showToast(msg) {
 let labels = ['Work','Gamedev','Health','Personal','Finance','Creative'];
 // ── CURRENTS AS THE CATEGORY SYSTEM ───────────────────────
 function _currentExists(name){ return !!name && goals.some(g=>g.name===name); }
+// Each Current owns a fixed colour slot (1–8), saved with it.
+function _ensureGoalColors(){
+  goals.forEach(g=>{
+    if (g.colorSlot>=1 && g.colorSlot<=8) return;
+    const used=[0,0,0,0,0,0,0,0,0];
+    goals.forEach(o=>{ if(o!==g && o.colorSlot) used[o.colorSlot]++; });
+    let best=1; for(let s=2;s<=8;s++) if(used[s]<used[best]) best=s;
+    g.colorSlot=best;
+  });
+}
 function _currentColor(name){
-  const i = goals.findIndex(g=>g.name===name);
-  return i<0 ? '' : `var(--lbl${(i%8)+1})`;
+  const g = goals.find(x=>x.name===name);
+  if (!g) return '';
+  if (!g.colorSlot) _ensureGoalColors();
+  return `var(--lbl${g.colorSlot})`;
+}
+// Multi-Current model. item.currents = [names]; item.goal mirrors the first for back-compat.
+function _itemCurrents(item){
+  const arr = Array.isArray(item.currents) ? item.currents : (item.goal ? [item.goal] : []);
+  return arr.filter((n,i)=>_currentExists(n) && arr.indexOf(n)===i);
+}
+function _setItemCurrents(item, arr){
+  item.currents = [...new Set(arr.filter(Boolean))];
+  item.goal = item.currents[0] || '';
+}
+function _itemHasCurrent(item, name){ return _itemCurrents(item).includes(name); }
+// Inline style vars for the blended bar/tint, and the badge HTML
+function _currentStyle(item){
+  const cs=_itemCurrents(item).map(_currentColor);
+  if(!cs.length) return '';
+  const bar = cs.length===1 ? cs[0] : `linear-gradient(to bottom,${cs.join(',')})`;
+  const tints = cs.map(col=>`color-mix(in srgb,${col} 7%,transparent)`);
+  const tint = tints.length===1 ? `linear-gradient(90deg,${tints[0]},transparent 70%)` : `linear-gradient(90deg,${tints.join(',')})`;
+  return `--lbar:${bar};--ltint:${tint};`;
+}
+function _currentBadges(item, extraStyle){
+  return _itemCurrents(item).map(n=>`<span class="lbl-badge" style="--lc:${_currentColor(n)};${extraStyle||''}">◆ ${n}</span>`).join(' ');
+}
+function _removeCurrentXP(name, amt){
+  const g=goals.find(x=>x.name===name);
+  if(g){ g.xp=Math.max(0,(g.xp||0)-amt); renderGoals(); }
 }
 // Back-compat alias for any remaining callers
 function _labelColor(name){ return _currentColor(name); }
 
+function _pickerSel(cid){
+  const el=document.getElementById(cid);
+  try { return JSON.parse(el.dataset.selected||'[]').filter(_currentExists); } catch(e){ return []; }
+}
 function _renderCurrentPicker(cid, selected){
   const el=document.getElementById(cid); if(!el) return;
-  el.dataset.selected = _currentExists(selected) ? selected : '';
-  const sel = el.dataset.selected;
-  const chip=(name,label,dotCol)=>`<div class="opt-btn${sel===name?' active':''}" data-goal="${name.replace(/"/g,'&quot;')}" onclick="_pickCurrent('${cid}',this)" style="font-size:0.75rem">${dotCol?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dotCol};margin-right:5px;vertical-align:middle"></span>`:''}${label}</div>`;
-  el.innerHTML = chip('','None','') +
-    goals.map(g=>chip(g.name,g.name,_currentColor(g.name))).join('') +
+  const arr = (Array.isArray(selected)?selected:(selected?[selected]:[])).filter(_currentExists);
+  el.dataset.selected = JSON.stringify(arr);
+  const chip=(i,label,dotCol,active)=>`<div class="opt-btn${active?' active':''}" onclick="_pickCurrent('${cid}',${i})" style="font-size:0.75rem">${dotCol?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dotCol};margin-right:5px;vertical-align:middle"></span>`:''}${label}</div>`;
+  el.innerHTML = chip(-1,'None','',!arr.length) +
+    goals.map((g,i)=>chip(i,g.name,_currentColor(g.name),arr.includes(g.name))).join('') +
     `<div class="opt-btn" onclick="_pickerNewCurrent('${cid}')" style="font-size:0.75rem;border-style:dashed;color:var(--purple)">＋ New Current</div>`;
 }
-function _pickCurrent(cid, btn){
-  const el=document.getElementById(cid);
-  el.dataset.selected = btn.dataset.goal || '';
-  [...el.children].forEach(b=>b.classList.toggle('active', b===btn));
+function _pickCurrent(cid, idx){
+  let arr=_pickerSel(cid);
+  if (idx<0) arr=[];
+  else { const n=goals[idx]&&goals[idx].name; if(!n) return;
+    arr = arr.includes(n) ? arr.filter(x=>x!==n) : [...arr,n]; }
+  _renderCurrentPicker(cid, arr);
 }
-function _getCurrentPick(cid){
-  const el=document.getElementById(cid);
-  return el && _currentExists(el.dataset.selected) ? el.dataset.selected : '';
-}
+function _getCurrentPick(cid){ return _pickerSel(cid); }
 function _pickerNewCurrent(cid){
   const el=document.getElementById(cid); if(!el) return;
   el.innerHTML=`<div style="display:flex;gap:6px;width:100%">
-    <input class="field-input" id="${cid}-new" placeholder="New Current name" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();_pickerCreateCurrent('${cid}');}if(event.key==='Escape')_renderCurrentPicker('${cid}',document.getElementById('${cid}').dataset.selected)">
+    <input class="field-input" id="${cid}-new" placeholder="New Current name" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();_pickerCreateCurrent('${cid}');}if(event.key==='Escape')_renderCurrentPicker('${cid}',_pickerSel('${cid}'))">
     <button class="opt-btn active" onclick="_pickerCreateCurrent('${cid}')" style="white-space:nowrap">Create</button>
-    <button class="opt-btn" onclick="_renderCurrentPicker('${cid}',document.getElementById('${cid}').dataset.selected)">✕</button></div>`;
+    <button class="opt-btn" onclick="_renderCurrentPicker('${cid}',_pickerSel('${cid}'))">✕</button></div>`;
   setTimeout(()=>document.getElementById(cid+'-new').focus(),30);
 }
 function _pickerCreateCurrent(cid){
@@ -1329,10 +1374,10 @@ function _pickerCreateCurrent(cid){
   if(!_currentExists(name)){
     goals.push({id:nextGoalId++,name,measureLabel:'Progress',measureCurrent:0,measureStart:0,measureTarget:100,
       xp:0,xpNext:1000,level:1,category:'Personal',links:[],subgoals:[]});
-    renderGoals(); cloudSave();
+    _ensureGoalColors(); renderGoals(); cloudSave();
     showToast(`Current "${name}" created`);
   }
-  _renderCurrentPicker(cid,name);
+  _renderCurrentPicker(cid,[..._pickerSel(cid),name]);
 }
 function openQuickTask(){
   document.getElementById('qt-name').value='';
@@ -1343,8 +1388,9 @@ function openQuickTask(){
 function saveQuickTask(){
   const text=document.getElementById('qt-name').value.trim();
   if(!text){showToast('Give the task a name');return;}
-  const goal=_getCurrentPick('qt-current-opts');
-  tasks.push({id:nextTaskId++,text,priority:'med',daysUntilDue:null,goal,done:false,label:'',notes:''});
+  const nt={id:nextTaskId++,text,priority:'med',daysUntilDue:null,done:false,label:'',notes:''};
+  _setItemCurrents(nt,_getCurrentPick('qt-current-opts'));
+  tasks.push(nt);
   closeModal('quick-task');
   renderTasks(); renderDailyTasks();
   showToast('Task added');
@@ -1506,7 +1552,7 @@ function prepGoalModal(id) {
   document.getElementById('goal-measure-current').value = g ? g.measureCurrent : '';
   document.getElementById('goal-measure-target').value = g ? g.measureTarget : '';
   document.getElementById('goal-links-input') && (document.getElementById('goal-links-input').value = g ? (g.links||[]).join(', ') : '');
-  buildHabitPicker(g ? habits.filter(h=>h.goal===g.name).map(h=>h.name) : []);
+  buildHabitPicker(g ? habits.filter(h=>_itemHasCurrent(h,g.name)).map(h=>h.name) : []);
   document.getElementById('goal-delete-btn').style.display = g ? 'block' : 'none';
   _editingSubgoals = g ? JSON.parse(JSON.stringify(g.subgoals||[])) : [];
   _renderSubgoalsList();
@@ -1529,8 +1575,9 @@ function _showFieldError(inputId, errId) {
 function _applyGoalHabitLinks(goalName, selectedHabitNames){
   // Habit's own .goal field is the single source of truth
   habits.forEach(h=>{
-    if (selectedHabitNames.includes(h.name)) h.goal = goalName;
-    else if (h.goal === goalName) h.goal = '';
+    const cur=_itemCurrents(h);
+    if (selectedHabitNames.includes(h.name)) { if(!cur.includes(goalName)) _setItemCurrents(h,[...cur,goalName]); }
+    else if (cur.includes(goalName)) _setItemCurrents(h,cur.filter(n=>n!==goalName));
   });
   renderHabits(); renderTasks(); renderDailyTasks();
 }
@@ -1551,8 +1598,10 @@ function saveGoal() {
       if (oldName !== name) {
         if (goals.some(x=>x.id!==g.id && x.name===name)) { showToast('A Current with that name already exists'); return; }
         // Propagate rename to everything that references this Current by name
-        habits.forEach(h=>{ if(h.goal===oldName) h.goal=name; });
-        tasks.forEach(t=>{ if(t.goal===oldName) t.goal=name; });
+        [...habits,...tasks].forEach(it=>{
+          const raw = Array.isArray(it.currents) ? it.currents : (it.goal?[it.goal]:[]);
+          if (raw.includes(oldName)) _setItemCurrents(it, raw.map(n=>n===oldName?name:n));
+        });
         if (_habitLabelFilter===oldName) _habitLabelFilter=name;
         if (_taskLabelFilter===oldName)  _taskLabelFilter=name;
       }
@@ -1569,6 +1618,7 @@ function saveGoal() {
 }
 
 function renderGoals() {
+  _ensureGoalColors();
   _renderLabelFilterChips();
   const list = document.getElementById('goals-list');
   list.innerHTML = goals.map(g => {
@@ -1587,7 +1637,7 @@ function renderGoals() {
     }
     mp = Math.max(mp, 0);
     const xp = Math.min(g.xp/g.xpNext,1);
-    const _lh = habits.filter(h=>h.goal===g.name), _lt = tasks.filter(t=>t.goal===g.name&&!t.done);
+    const _lh = habits.filter(h=>_itemHasCurrent(h,g.name)), _lt = tasks.filter(t=>_itemHasCurrent(t,g.name)&&!t.done);
     g.links = _lh.map(h=>h.name);
     const tagHtml = _lh.map(h=>`<span class="goal-tag gt-h">${h.name}</span>`).join('') + (_lt.length?`<span class="goal-tag gt-h" style="opacity:0.7">${_lt.length} open task${_lt.length>1?'s':''}</span>`:'');
     // Direction indicator
@@ -1595,7 +1645,7 @@ function renderGoals() {
     const remaining = isDecreasing
       ? `${(g.measureCurrent - g.measureTarget).toFixed(1)} to go`
       : `${(g.measureTarget - g.measureCurrent).toFixed(1)} to go`;
-    return `<div class="goal-card" style="margin-bottom:10px" onclick="openModal('add-goal',${g.id})">
+    return `<div class="goal-card has-gc" style="margin-bottom:10px;--gc:${_currentColor(g.name)}" onclick="openModal('add-goal',${g.id})">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div class="goal-name">${g.name}</div>
         <div class="goal-xp">LV ${g.level} · ${g.xp} XP</div>
@@ -1633,7 +1683,7 @@ function prepHabitModal(id) {
   document.getElementById('habit-modal-title').textContent = h ? 'Edit Habit' : 'New Habit';
   document.getElementById('habit-name-input').value = h ? h.name : '';
   document.getElementById('habit-notes-input').value = h ? (h.notes || '') : '';
-  _renderCurrentPicker('habit-current-opts', h ? h.goal : '');
+  _renderCurrentPicker('habit-current-opts', h ? _itemCurrents(h) : []);
   habitMissBehavior = h ? h.miss : 'rollover';
   habitStreakType = h ? h.streakType : 'daily';
   document.getElementById('habit-delete-btn').style.display = h ? 'block' : 'none';
@@ -1664,14 +1714,15 @@ function saveHabit() {
   const diffEl = [...document.querySelectorAll('#modal-add-habit .opt-row:first-of-type .opt-btn')].find(b=>b.classList.contains('active'));
   const diff = diffEl ? diffEl.textContent.trim() : 'Medium';
   const days = [...document.querySelectorAll('#habit-days-opts .opt-btn')].map((b,i)=>b.classList.contains('active')?i:-1).filter(i=>i>=0);
-  const goal = _getCurrentPick('habit-current-opts');
+  const _cur = _getCurrentPick('habit-current-opts');
+  const goal = _cur[0]||'';
   const label = '';
   const notes = document.getElementById('habit-notes-input').value.trim();
   if (editingId !== null) {
     const h = habits.find(x=>x.id===editingId);
-    if (h) Object.assign(h,{name,diff,days,goal,miss:habitMissBehavior,streakType:habitStreakType,label,notes});
+    if (h) { Object.assign(h,{name,diff,days,miss:habitMissBehavior,streakType:habitStreakType,label,notes}); _setItemCurrents(h,_cur); }
   } else {
-    habits.push({id:nextHabitId++,name,diff,goal,days,streak:0,bestStreak:0,miss:habitMissBehavior,streakType:habitStreakType,consistency:0,done:false,rolloverDebt:0,streakData:[],label:label||'',notes});
+    habits.push({id:nextHabitId++,name,diff,goal,currents:_cur,days,streak:0,bestStreak:0,miss:habitMissBehavior,streakType:habitStreakType,consistency:0,done:false,rolloverDebt:0,streakData:[],label:label||'',notes});
   }
   closeModal('add-habit');
   renderHabits();
@@ -1702,7 +1753,7 @@ function _habitMissedYesterday(h) {
 function renderHabits() {
   const DAY_LETTERS = ['M','T','W','T','F','S','S'];
   let list = [...habits];
-  if (_habitLabelFilter !== 'all') list = list.filter(h => h.goal === _habitLabelFilter);
+  if (_habitLabelFilter !== 'all') list = list.filter(h => _itemHasCurrent(h,_habitLabelFilter));
 
   const now = new Date(); now.setHours(0,0,0,0);
   const todayDow = (now.getDay() + 6) % 7; // Mon=0
@@ -1785,7 +1836,7 @@ function renderHabits() {
     const futureBadge     = isFuture && isActive ? `<span class="badge" style="background:rgba(100,100,120,0.12);border-color:rgba(100,100,120,0.25);color:var(--text3);font-size:0.5625rem">upcoming</span>` : '';
     const warningCls = isWarning ? ' missed-warning' : '';
 
-    return `<div class="habit-row${warningCls}${_currentExists(h.goal)?' has-lbl':''}" data-id="${h.id}" data-type="habit" draggable="true" style="${_currentExists(h.goal)?'--lc:'+_currentColor(h.goal)+';':''}${inactive?'opacity:0.35':''}">
+    return `<div class="habit-row${warningCls}${_itemCurrents(h).length?' has-lbl':''}" data-id="${h.id}" data-type="habit" draggable="true" style="${_currentStyle(h)}${inactive?'opacity:0.35':''}">
       <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="hcheck ${isActive&&isDone?'done':canToggle&&h.miss==='rollover'&&h.rolloverDebt>0?'rollover':''}"
            ${canToggle?'onclick="toggleHabit('+h.id+',this)"':''}
@@ -1796,7 +1847,7 @@ function renderHabits() {
         <div class="habit-name${isActive&&isDone?' done':''}">${h.name}</div>
         <div class="habit-meta">
           <span class="badge ${diffCls}">${h.diff}</span>
-          ${_currentExists(h.goal)?`<span class="lbl-badge">◆ ${h.goal}</span>`:''}
+          ${_currentBadges(h)}
           ${isWarning?`<span class="nmt-badge">⚠ missed yesterday</span>`:''}
           ${inactiveBadge}
           ${pastDayBadge}
@@ -1854,11 +1905,12 @@ function toggleHabit(id, sourceEl) {
     const xpAmt = XP_HABIT[h.diff] || 30;
     _addXP(xpAmt, sourceEl);
     playHabitTaskSound();
-    _awardLinkedCurrentXP(h.goal, xpAmt);
+    _itemCurrents(h).forEach(n=>_awardLinkedCurrentXP(n, xpAmt));
   } else {
     delete h.completionLog[viewKey];
     habitCompletions[viewKey] = Math.max(0, (habitCompletions[viewKey] || 1) - 1);
     _removeXP(XP_HABIT[h.diff] || 30);
+    _itemCurrents(h).forEach(n=>_removeCurrentXP(n, XP_HABIT[h.diff] || 30));
   }
   recalcStreaks();
   renderHabits();
@@ -1884,7 +1936,7 @@ function buildCalendar() {
   const DAY_ABBR = ['M','T','W','T','F','S','S'];
 
   let hList = [...habits];
-  if (_habitLabelFilter !== 'all') hList = hList.filter(h => h.goal === _habitLabelFilter);
+  if (_habitLabelFilter !== 'all') hList = hList.filter(h => _itemHasCurrent(h,_habitLabelFilter));
 
   if (!hList.length) {
     el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);text-align:center;padding:16px;font-family:monospace">Add habits to see the calendar</div>';
@@ -2025,7 +2077,7 @@ function prepTaskModal(id) {
   document.getElementById('task-modal-title').textContent = t ? 'Edit Task' : 'New Task';
   document.getElementById('task-name-input').value = t ? t.text : '';
   document.getElementById('task-notes-input').value = t ? (t.notes || '') : '';
-  _renderCurrentPicker('task-current-opts', t ? t.goal : '');
+  _renderCurrentPicker('task-current-opts', t ? _itemCurrents(t) : []);
   document.getElementById('task-delete-btn').style.display = t ? 'block' : 'none';
   const today = new Date();
   if (t && t.daysUntilDue !== null && t.daysUntilDue !== undefined) {
@@ -2053,13 +2105,14 @@ function saveTask() {
   const today = new Date(); today.setHours(0,0,0,0);
   // Blank due date means no due date (null), not "today"
   const daysUntilDue = dueVal ? Math.round((new Date(dueVal+'T00:00:00')-today)/86400000) : null;
-  const goal = _getCurrentPick('task-current-opts');
+  const _cur = _getCurrentPick('task-current-opts');
+  const goal = _cur[0]||'';
   const label = '';
   if (editingId !== null) {
     const t = tasks.find(x=>x.id===editingId);
-    if (t) Object.assign(t,{text,priority,daysUntilDue,goal,label:label||'',notes});
+    if (t) { Object.assign(t,{text,priority,daysUntilDue,label:label||'',notes}); _setItemCurrents(t,_cur); }
   } else {
-    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,done:false,label:label||'',notes});
+    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,currents:_cur,done:false,label:label||'',notes});
   }
   closeModal('add-task');
   renderTasks(); renderDailyTasks();
@@ -2076,7 +2129,7 @@ function sortTasks(type,el) {
 function renderTasks() {
   let sorted = [...tasks];
   // Apply label filter
-  if (_taskLabelFilter !== 'all') sorted = sorted.filter(t => t.goal === _taskLabelFilter);
+  if (_taskLabelFilter !== 'all') sorted = sorted.filter(t => _itemHasCurrent(t,_taskLabelFilter));
   // Always separate done/undone first, done always at bottom
   const undone = sorted.filter(t=>!t.done);
   const done   = sorted.filter(t=>t.done);
@@ -2141,12 +2194,12 @@ function taskRowHTML(t) {
   const pColors={high:'var(--pink)',med:'var(--amber)',low:'var(--teal)',optional:'var(--text3)'};
   const overdue=!t.done&&hasDue&&d<0?`<span class="overdue-badge">${Math.abs(d)}d late</span>`:'';
   const inDaily = dailyTaskIds.has(t.id);
-  return `<div class="task-row${_currentExists(t.goal)?' has-lbl':''}" data-id="${t.id}" data-type="task" draggable="true" style="${_currentExists(t.goal)?'--lc:'+_currentColor(t.goal):''}">
+  return `<div class="task-row${_itemCurrents(t).length?' has-lbl':''}" data-id="${t.id}" data-type="task" draggable="true" style="${_currentStyle(t)}">
     <div class="drag-handle" title="Drag to reorder">⠿</div>    <div class="pdot" style="background:${pColors[t.priority]};margin-top:4px"></div>
     <div class="tcheck ${t.done?'done':''}" onclick="toggleTask(${t.id},this)"></div>
     <div class="task-body">
       <div class="task-text${t.done?' done':''}" onclick="openModal('add-task',${t.id})">${t.text}</div>
-      ${_currentExists(t.goal)?`<div class="lbl-badge" style="margin-top:2px">◆ ${t.goal}</div>`:''}
+      ${_itemCurrents(t).length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">${_currentBadges(t)}</div>`:''}
       ${t.notes?`<div style="margin-top:4px;font-size:0.6875rem;color:var(--text3);line-height:1.5;white-space:pre-wrap;padding-left:8px;border-left:2px solid var(--border2)">${t.notes.replace(/</g,'&lt;')}</div>`:''}
       <div class="task-due-row"><span class="task-due ${dueCls}">${dueTxt}</span>${overdue}</div>
     </div>
@@ -2230,7 +2283,7 @@ function renderDailyTasks() {
     else if(d===0) {dueTxt='due today';       dueCls='due-today';}
     else if(d===1) {dueTxt='due tomorrow';    dueCls='due-soon';}
     else           {dueTxt=`due in ${d}d`;   dueCls='due-ok';}
-    return `<div class="daily-row${_currentExists(t.goal)?' has-lbl':''}" data-id="${t.id}" style="${_currentExists(t.goal)?'--lc:'+_currentColor(t.goal):''}">
+    return `<div class="daily-row${_itemCurrents(t).length?' has-lbl':''}" data-id="${t.id}" style="${_currentStyle(t)}">
       <div class="daily-num">${i+1}</div>
       <div class="tcheck ${t.done?'done':''}" onclick="toggleTask(${t.id},this)" style="flex-shrink:0;margin-top:2px"></div>
       <div style="flex:1;min-width:0">
@@ -2238,7 +2291,7 @@ function renderDailyTasks() {
         <div class="daily-task-meta">
           <span class="task-due ${dueCls}">${dueTxt}</span>
           ${isPinned ? '<span style="color:var(--amber);margin-left:8px">📌 pinned</span>' : ''}
-          ${t.goal ? `<span style="color:var(--amber);margin-left:8px">→ ${t.goal}</span>` : ''}
+          ${_itemCurrents(t).length ? `<span style="margin-left:8px">${_currentBadges(t)}</span>` : ''}
           ${t.done && _dailyRemoveTimers[t.id] ? `<span style="color:var(--teal);margin-left:8px;cursor:pointer;text-decoration:underline" onclick="cancelAutoRemove(${t.id})">undo</span>` : ''}
         </div>
       </div>
@@ -2265,10 +2318,11 @@ function toggleTask(id, sourceEl){
   if (t.done) {
     _addXP(xpAmt, sourceEl);
     playHabitTaskSound();
-    _awardLinkedCurrentXP(t.goal, xpAmt);
+    _itemCurrents(t).forEach(n=>_awardLinkedCurrentXP(n, xpAmt));
     if (dailyTaskIds.has(id)) _scheduleAutoRemove(id);
   } else {
     _removeXP(xpAmt);
+    _itemCurrents(t).forEach(n=>_removeCurrentXP(n, xpAmt));
     if (_dailyRemoveTimers[id]) { clearTimeout(_dailyRemoveTimers[id]); delete _dailyRemoveTimers[id]; }
   }
   renderTasks(); renderDailyTasks();
@@ -3159,7 +3213,7 @@ function deleteItem(type) {
   if (!editingId) return;
   if (type==='goal') {
     const gd = goals.find(x=>x.id===editingId);
-    if (gd) { habits.forEach(h=>{ if(h.goal===gd.name) h.goal=''; }); tasks.forEach(t=>{ if(t.goal===gd.name) t.goal=''; }); }
+    if (gd) { [...habits,...tasks].forEach(it=>{ const raw=Array.isArray(it.currents)?it.currents:(it.goal?[it.goal]:[]); if(raw.includes(gd.name)) _setItemCurrents(it, raw.filter(n=>n!==gd.name)); }); }
     goals=goals.filter(x=>x.id!==editingId); closeModal('add-goal'); renderGoals();
     renderHabits(); renderTasks(); renderDailyTasks(); buildCalendar(); cloudSave();
   }
@@ -4458,7 +4512,7 @@ function _buildDataSnapshot() {
     const missedYesterday = _habitMissedYesterday(h);
     return {
       name: h.name, done: h.done, scheduled, streak: h.streak,
-      bestStreak: h.bestStreak||0, diff: h.diff, goal: h.goal||'',
+      bestStreak: h.bestStreak||0, diff: h.diff, currents: _itemCurrents(h),
       missedYesterday, consistency: Math.round((h.consistency||0)*100)+'%',
       label: h.label||''
     };
@@ -4472,7 +4526,7 @@ function _buildDataSnapshot() {
   // Tasks
   const taskSummary = tasks.filter(t=>!t.done).map(t => ({
     text: t.text, priority: t.priority, daysUntilDue: t.daysUntilDue??0,
-    goal: t.goal||'', label: t.label||''
+    currents: _itemCurrents(t)
   }));
 
   // Energy today
