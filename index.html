@@ -36,6 +36,7 @@
   --pink:#f06db0;--pink2:#c94d8a;
   --amber:#f5a623;--teal:#2dd4bf;--cyan:#67e8f9;--red:#f05a5a;
   --text:#ede8ff;--text2:#a89dc8;--text3:#6b5f8a;--dim:#3a3460;
+  --lbl1:#9d7ff5;--lbl2:#2dd4bf;--lbl3:#f5a623;--lbl4:#f06db0;--lbl5:#67e8f9;--lbl6:#a3e635;--lbl7:#fb7185;--lbl8:#c4b5fd;
   --sidebar-w:220px;
 }
 /* ── THEME: Midnight Green ── */
@@ -47,6 +48,7 @@
   --pink:#86efac;--pink2:#4ade80;
   --amber:#fbbf24;--teal:#34d399;--cyan:#6ee7b7;--red:#f87171;
   --text:#dcfce7;--text2:#a7f3d0;--text3:#4ade80;--dim:#14532d;
+  --lbl1:#4ade80;--lbl2:#fbbf24;--lbl3:#38bdf8;--lbl4:#f472b6;--lbl5:#a3e635;--lbl6:#c084fc;--lbl7:#fb923c;--lbl8:#5eead4;
 }
 /* ── THEME: Crimson Dark ── */
 [data-theme="crimson"]{
@@ -57,6 +59,7 @@
   --pink:#fca5a5;--pink2:#f87171;
   --amber:#fbbf24;--teal:#fb923c;--cyan:#fcd34d;--red:#f43f5e;
   --text:#fff1f1;--text2:#fecaca;--text3:#f87171;--dim:#7f1d1d;
+  --lbl1:#f87171;--lbl2:#fbbf24;--lbl3:#fb923c;--lbl4:#f9a8d4;--lbl5:#fde68a;--lbl6:#c084fc;--lbl7:#fca5a5;--lbl8:#fdba74;
 }
 /* ── THEME: Ocean Blue ── */
 [data-theme="ocean"]{
@@ -67,6 +70,7 @@
   --pink:#93c5fd;--pink2:#60a5fa;
   --amber:#fbbf24;--teal:#22d3ee;--cyan:#67e8f9;--red:#f87171;
   --text:#eff6ff;--text2:#bfdbfe;--text3:#60a5fa;--dim:#1e3a5f;
+  --lbl1:#60a5fa;--lbl2:#22d3ee;--lbl3:#fbbf24;--lbl4:#a78bfa;--lbl5:#34d399;--lbl6:#f472b6;--lbl7:#93c5fd;--lbl8:#fb923c;
 }
 /* ── THEME: Amber/Gold ── */
 [data-theme="amber"]{
@@ -77,6 +81,7 @@
   --pink:#fcd34d;--pink2:#fbbf24;
   --amber:#fb923c;--teal:#34d399;--cyan:#67e8f9;--red:#f87171;
   --text:#fffbeb;--text2:#fde68a;--text3:#fbbf24;--dim:#78350f;
+  --lbl1:#fbbf24;--lbl2:#fb923c;--lbl3:#34d399;--lbl4:#f87171;--lbl5:#67e8f9;--lbl6:#c084fc;--lbl7:#a3e635;--lbl8:#fde68a;
 }
 /* ── THEME: Light Mode ── */
 [data-theme="light"]{
@@ -87,6 +92,7 @@
   --pink:#c026a8;--pink2:#a01c8c;
   --amber:#b45309;--teal:#0d7a6e;--cyan:#0369a1;--red:#dc2626;
   --text:#1a1040;--text2:#3d2d80;--text3:#6b5f8a;--dim:#d4d0ff;
+  --lbl1:#6d3aee;--lbl2:#0d7a6e;--lbl3:#b45309;--lbl4:#c026a8;--lbl5:#0369a1;--lbl6:#4d7c0f;--lbl7:#be123c;--lbl8:#7c3aed;
 }
 html{height:100%;height:-webkit-fill-available}
 body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow:hidden;display:flex;flex-direction:column}
@@ -102,6 +108,12 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .logo{font-family:'Rajdhani',sans-serif;font-size:1.25rem;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;text-transform:uppercase;min-width:0;flex-shrink:1}
 .topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .top-btn{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:0.75rem;color:var(--text2);cursor:pointer;font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all 0.15s}
+@media (max-width:480px){
+  .logo{font-size:1rem;letter-spacing:2px}
+  .topbar-right{gap:4px}
+  .topbar-right .top-btn{padding:5px 7px}
+  #auth-label{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
 .top-btn:hover{border-color:var(--border2);color:var(--text)}
 .top-btn.vacation{background:rgba(45,212,191,0.1);border-color:rgba(45,212,191,0.3);color:var(--teal)}
 
@@ -211,6 +223,8 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .task-row{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);transition:opacity 0.15s,background 0.15s}
 .drag-handle{font-size:1.125rem;color:var(--border2);cursor:grab;padding:2px 2px 0 0;flex-shrink:0;touch-action:none;user-select:none;line-height:1;letter-spacing:-1px}
 .drag-handle:active{cursor:grabbing;color:var(--purple)}
+.habit-row.has-lbl,.task-row.has-lbl,.daily-row.has-lbl{border-left:3px solid var(--lc);padding-left:8px}
+.lbl-badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:0.625rem;font-family:'Share Tech Mono',monospace;color:var(--lc);background:color-mix(in srgb,var(--lc) 14%,transparent);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent)}
 .habit-row.missed-warning{border-left:3px solid #ef4444;background:rgba(239,68,68,0.06)}
 .habit-row.missed-warning .habit-name{color:#ef4444}
 .nmt-badge{padding:1px 7px;border-radius:10px;font-size:0.5625rem;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-family:'Share Tech Mono',monospace}
@@ -391,6 +405,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <span id="auth-avatar" style="width:20px;height:20px;border-radius:50%;background:var(--surf2);display:inline-flex;align-items:center;justify-content:center;font-size:0.625rem;color:var(--text3);flex-shrink:0">?</span>
         <span id="auth-label">Sign In</span>
       </div>
+      <div class="top-btn" id="quick-task-btn" onclick="openQuickTask()" title="Quick add task" style="font-size:1rem;font-weight:700;padding-left:9px;padding-right:9px">+</div>
       <div class="top-btn" id="sync-btn" onclick="manualSync()" title="Sync now" style="font-size:0.875rem">⟳</div>
       <div class="top-btn" id="signal-btn" onclick="openSignalPanel()" title="Signal AI" style="font-size:0.875rem;position:relative">✦<div id="signal-dot" style="display:none;position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:#22c55e"></div></div>
       <div class="top-btn" onclick="openModal('settings')">⚙</div>
@@ -969,6 +984,19 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
   </div>
 </div>
 
+<!-- QUICK ADD TASK -->
+<div class="modal-overlay" id="modal-quick-task">
+  <div class="modal">
+    <div class="modal-title"><span>Quick Add Task</span><button class="modal-close" onclick="closeModal('quick-task')">✕</button></div>
+    <div class="modal-section">Task Name</div>
+    <input class="field-input" id="qt-name" placeholder="What needs doing?" onkeydown="if(event.key==='Enter'){event.preventDefault();saveQuickTask();}">
+    <div class="modal-section">Category</div>
+    <div class="opt-row" id="qt-label-opts" style="flex-wrap:wrap;gap:6px"></div>
+    <div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:10px">Saved as Medium priority, no due date. Edit it later for more detail.</div>
+    <button class="modal-save" onclick="saveQuickTask()">Add Task</button>
+  </div>
+</div>
+
 <!-- ADD / EDIT TASK -->
 <div class="modal-overlay" id="modal-add-task">
   <div class="modal">
@@ -1270,6 +1298,27 @@ function showToast(msg) {
 }
 
 let labels = ['Work','Gamedev','Health','Personal','Finance','Creative'];
+function _labelColor(lbl){
+  if(!lbl) return '';
+  const i = labels.indexOf(lbl);
+  return `var(--lbl${((i<0?0:i)%8)+1})`;
+}
+function openQuickTask(){
+  document.getElementById('qt-name').value='';
+  _renderModalLabelPicker('qt-label-opts','');
+  openModal('quick-task');
+  setTimeout(()=>document.getElementById('qt-name').focus(),50);
+}
+function saveQuickTask(){
+  const text=document.getElementById('qt-name').value.trim();
+  if(!text){showToast('Give the task a name');return;}
+  const label=_getModalLabel('qt-label-opts')||'';
+  tasks.push({id:nextTaskId++,text,priority:'med',daysUntilDue:null,goal:'',done:false,label,notes:''});
+  closeModal('quick-task');
+  renderTasks(); renderDailyTasks();
+  showToast('Task added');
+  cloudSave();
+}
 let mantras = [];
 let _mantraIdx = 0;
 
@@ -1681,7 +1730,7 @@ function renderHabits() {
     const futureBadge     = isFuture && isActive ? `<span class="badge" style="background:rgba(100,100,120,0.12);border-color:rgba(100,100,120,0.25);color:var(--text3);font-size:0.5625rem">upcoming</span>` : '';
     const warningCls = isWarning ? ' missed-warning' : '';
 
-    return `<div class="habit-row${warningCls}" data-id="${h.id}" data-type="habit" draggable="true" ${inactiveOverlay}>
+    return `<div class="habit-row${warningCls}${h.label?' has-lbl':''}" data-id="${h.id}" data-type="habit" draggable="true" style="${h.label?'--lc:'+_labelColor(h.label)+';':''}${inactive?'opacity:0.35':''}">
       <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="hcheck ${isActive&&isDone?'done':canToggle&&h.miss==='rollover'&&h.rolloverDebt>0?'rollover':''}"
            ${canToggle?'onclick="toggleHabit('+h.id+',this)"':''}
@@ -1693,7 +1742,7 @@ function renderHabits() {
         <div class="habit-meta">
           <span class="badge ${diffCls}">${h.diff}</span>
           ${h.goal?`<span class="badge bd-goal">→ ${h.goal}</span>`:''}
-          ${h.label?`<span class="badge" style="background:rgba(67,232,249,0.1);border-color:rgba(67,232,249,0.25);color:var(--cyan)">${h.label}</span>`:''}
+          ${h.label?`<span class="lbl-badge">${h.label}</span>`:''}
           ${isWarning?`<span class="nmt-badge">⚠ missed yesterday</span>`:''}
           ${inactiveBadge}
           ${pastDayBadge}
@@ -2040,13 +2089,13 @@ function taskRowHTML(t) {
   const pColors={high:'var(--pink)',med:'var(--amber)',low:'var(--teal)',optional:'var(--text3)'};
   const overdue=!t.done&&hasDue&&d<0?`<span class="overdue-badge">${Math.abs(d)}d late</span>`:'';
   const inDaily = dailyTaskIds.has(t.id);
-  return `<div class="task-row" data-id="${t.id}" data-type="task" draggable="true">
+  return `<div class="task-row${t.label?' has-lbl':''}" data-id="${t.id}" data-type="task" draggable="true" style="${t.label?'--lc:'+_labelColor(t.label):''}">
     <div class="drag-handle" title="Drag to reorder">⠿</div>    <div class="pdot" style="background:${pColors[t.priority]};margin-top:4px"></div>
     <div class="tcheck ${t.done?'done':''}" onclick="toggleTask(${t.id},this)"></div>
     <div class="task-body">
       <div class="task-text${t.done?' done':''}" onclick="openModal('add-task',${t.id})">${t.text}</div>
       ${t.goal?`<div class="task-goal-link">→ ${t.goal}</div>`:''}
-      ${t.label?`<div style="display:inline-block;margin-top:2px;padding:1px 8px;background:rgba(67,232,249,0.1);border:1px solid rgba(67,232,249,0.25);border-radius:10px;font-size:0.625rem;color:var(--cyan);font-family:'Share Tech Mono',monospace">${t.label}</div>`:''}
+      ${t.label?`<div class="lbl-badge" style="margin-top:2px">${t.label}</div>`:''}
       ${t.notes?`<div style="margin-top:4px;font-size:0.6875rem;color:var(--text3);line-height:1.5;white-space:pre-wrap;padding-left:8px;border-left:2px solid var(--border2)">${t.notes.replace(/</g,'&lt;')}</div>`:''}
       <div class="task-due-row"><span class="task-due ${dueCls}">${dueTxt}</span>${overdue}</div>
     </div>
@@ -2130,7 +2179,7 @@ function renderDailyTasks() {
     else if(d===0) {dueTxt='due today';       dueCls='due-today';}
     else if(d===1) {dueTxt='due tomorrow';    dueCls='due-soon';}
     else           {dueTxt=`due in ${d}d`;   dueCls='due-ok';}
-    return `<div class="daily-row" data-id="${t.id}">
+    return `<div class="daily-row${t.label?' has-lbl':''}" data-id="${t.id}" style="${t.label?'--lc:'+_labelColor(t.label):''}">
       <div class="daily-num">${i+1}</div>
       <div class="tcheck ${t.done?'done':''}" onclick="toggleTask(${t.id},this)" style="flex-shrink:0;margin-top:2px"></div>
       <div style="flex:1;min-width:0">
@@ -2813,7 +2862,7 @@ function _renderSettingsLabels() {
   if (!el) return;
   el.innerHTML = labels.map(l => `
     <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 12px;background:var(--surf2);border:1px solid var(--border2);border-radius:16px;font-size:0.75rem;color:var(--text2)">
-      ${l}
+      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${_labelColor(l)};margin-right:5px;vertical-align:middle"></span>${l}
       <span onclick="removeLabel('${l}')" style="font-size:0.875rem;color:var(--text3);cursor:pointer;line-height:1;padding-left:2px" title="Remove">×</span>
     </div>`).join('');
 }
@@ -2849,7 +2898,7 @@ function _renderModalLabelPicker(containerId, currentLabel) {
   el.innerHTML = none + labels.map(l => `
     <div class="opt-btn${currentLabel===l?' active':''}"
       onclick="_selectModalLabel('${containerId}','${l}')"
-      style="font-size:0.75rem">${l}</div>`).join('');
+      style="font-size:0.75rem"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${_labelColor(l)};margin-right:5px;vertical-align:middle"></span>${l}</div>`).join('');
 }
 
 function _selectModalLabel(containerId, val) {
@@ -2878,7 +2927,7 @@ function _renderLabelFilterChips() {
     el.innerHTML = `<div class="sort-chip${currentFilter==='all'?' active':''}"
         onclick="_setLabelFilter('${type}','all',this)">All</div>` +
       labels.map(l => `<div class="sort-chip${currentFilter===l?' active':''}"
-        onclick="_setLabelFilter('${type}','${l}',this)">${l}</div>`).join('');
+        onclick="_setLabelFilter('${type}','${l}',this)"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${_labelColor(l)};margin-right:5px;vertical-align:middle"></span>${l}</div>`).join('');
   });
 }
 
