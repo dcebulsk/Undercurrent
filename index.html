@@ -419,10 +419,8 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <span id="auth-avatar" style="width:20px;height:20px;border-radius:50%;background:var(--surf2);display:inline-flex;align-items:center;justify-content:center;font-size:0.625rem;color:var(--text3);flex-shrink:0">?</span>
         <span id="auth-label">Sign In</span>
       </div>
-      <div class="top-btn" id="voice-btn" onclick="startVoiceTask()" title="Voice add task" style="font-size:0.875rem;padding-left:8px;padding-right:8px">🎙</div>
-      <div class="top-btn" id="quick-task-btn" onclick="openQuickTask()" title="Quick add task" style="font-size:1rem;font-weight:700;padding-left:9px;padding-right:9px">+</div>
+      <div class="top-btn" id="quick-task-btn" onclick="openQuickTask()" title="Quick add task — type or tap 🎙 to speak" style="font-size:1rem;font-weight:700;padding-left:9px;padding-right:9px">+</div>
       <div class="top-btn" id="sync-btn" onclick="manualSync()" title="Sync now" style="font-size:0.875rem">⟳</div>
-      <div class="top-btn" id="signal-btn" onclick="openSignalPanel()" title="Signal AI" style="font-size:0.875rem;position:relative">✦<div id="signal-dot" style="display:none;position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:#22c55e"></div></div>
       <div class="top-btn" onclick="openModal('settings')">⚙</div>
     </div>
   </div>
@@ -838,33 +836,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       </div>
     </div>
 
-    <!-- SIGNAL AI PANEL -->
-    <div id="signal-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,5,15,0.88);z-index:600;align-items:center;justify-content:center">
-      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;max-width:420px;width:92%;max-height:85vh;margin:16px;display:flex;flex-direction:column;overflow:hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:1.25rem">✦</span>
-            <span style="font-family:'Rajdhani',sans-serif;font-size:1.25rem;font-weight:700;color:var(--purple)">Signal</span>
-          </div>
-          <button onclick="closeSignalPanel()" style="background:none;border:none;color:var(--text3);font-size:1.25rem;cursor:pointer">✕</button>
-        </div>
-        <div id="signal-messages" style="flex:1;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;min-height:80px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent">
-          <div style="font-size:0.75rem;color:var(--text3);text-align:center;font-family:'Share Tech Mono',monospace;padding:20px">Loading Signal…</div>
-        </div>
-        <div id="signal-input-area" style="display:none;flex-shrink:0">
-          <div style="display:flex;gap:8px">
-            <input class="field-input" id="signal-input" placeholder="Type your response…" style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSignalReply();}">
-            <button onclick="sendSignalReply()" style="background:var(--purple2);border:none;border-radius:8px;color:#fff;padding:8px 14px;font-size:0.875rem;cursor:pointer;font-family:'Exo 2',sans-serif">Send</button>
-          </div>
-        </div>
-        <div id="signal-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;flex-shrink:0">
-          <button onclick="signalMorningBrief()" class="opt-btn active" style="flex:1;text-align:center;font-size:0.75rem">☀ Morning Brief</button>
-          <button onclick="signalEveningReflect()" class="opt-btn active" style="flex:1;text-align:center;font-size:0.75rem">🌙 Evening Reflect</button>
-          <button onclick="signalHowAmIDoing()" class="opt-btn active" style="flex:1;text-align:center;font-size:0.75rem">📊 How Am I Doing?</button>
-        </div>
-      </div>
-    </div>
-
     <!-- YESTERDAY POPUP -->
     <div id="yesterday-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,5,15,0.88);z-index:600;align-items:center;justify-content:center">
       <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;max-width:380px;width:90%;max-height:80vh;overflow-y:auto;margin:16px">
@@ -1007,7 +978,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <div class="modal-section">Task Name</div>
     <div style="display:flex;gap:6px">
       <input class="field-input" id="qt-name" placeholder="What needs doing?" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();saveQuickTask();}">
-      <button class="opt-btn" onclick="startVoiceTask()" title="Dictate" style="padding:0 12px;flex-shrink:0">🎙</button>
+      <button class="opt-btn" id="voice-btn" onclick="startVoiceTask()" title="Dictate" style="padding:0 12px;flex-shrink:0">🎙</button>
     </div>
     <div id="qt-heard" style="display:none;font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:5px"></div>
     <div id="qt-hint" style="display:none;font-size:0.6875rem;color:var(--text2);margin-top:6px;padding:7px 10px;background:color-mix(in srgb,var(--purple) 10%,transparent);border:1px solid color-mix(in srgb,var(--purple) 30%,transparent);border-radius:8px;line-height:1.5"></div>
@@ -1193,10 +1164,6 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
         <input class="field-input" type="time" value="20:00" style="flex:1">
       </div>
     </div>
-
-    <div class="modal-section">Signal AI</div>
-    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">Your Anthropic API key for Signal. Stored on-device only.</div>
-    <input class="field-input" id="signal-api-key-input" type="password" placeholder="sk-ant-..." style="font-family:'Share Tech Mono',monospace;font-size:0.75rem" oninput="localStorage.setItem('uc-signal-key',this.value);cloudSave()">
 
     <div class="modal-section">Vacation Mode</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -3287,9 +3254,6 @@ function prepSettingsModal() {
   _renderSettingsFactors();
   _renderSettingsLabels();
   _renderSettingsMantras();
-  // Load Signal API key
-  const keyInput = document.getElementById('signal-api-key-input');
-  if (keyInput) keyInput.value = localStorage.getItem('uc-signal-key') || '';
   // Update vacation button state
   _updateVacationUI();
   // Mark active size button
@@ -3751,8 +3715,6 @@ function _doCloudSave() {
     labels, mantras, totalXP,
     lastSeenLevel: _lastLevel,
     energyFactors, energyCheckins, checkinState,
-    signalConversations, signalLastMorning: _signalLastMorning, signalLastEvening: _signalLastEvening,
-    signalApiKey: localStorage.getItem('uc-signal-key') || '',
     postureLog, customExercises, customRoutines, _nextCustomExId, _nextCustomRoutineId,
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
@@ -3801,10 +3763,6 @@ function _loadFromCloud(uid) {
         // Restore lastSeenLevel so level-up popup doesn't re-fire on other devices
         if (d.lastSeenLevel !== undefined) _lastLevel = d.lastSeenLevel;
         energyCheckins   = Array.isArray(d.energyCheckins) ? d.energyCheckins : [];
-        signalConversations = Array.isArray(d.signalConversations) ? d.signalConversations : [];
-        _signalLastMorning  = d.signalLastMorning || '';
-        _signalLastEvening  = d.signalLastEvening || '';
-        if (d.signalApiKey) localStorage.setItem('uc-signal-key', d.signalApiKey);
         postureLog = Array.isArray(d.postureLog) ? d.postureLog : [];
         customExercises = (d.customExercises && typeof d.customExercises==='object') ? d.customExercises : {};
         customRoutines = Array.isArray(d.customRoutines) ? d.customRoutines : [];
@@ -3866,7 +3824,6 @@ function _loadFromCloud(uid) {
         _rebuildAll();
         // Check yesterday popup after cloud data is loaded
         setTimeout(_checkYesterdayPopup, 800);
-        _checkSignalDot();
         _setSyncBar('✓ Data loaded', 'rgba(45,212,191,0.12)');
         setTimeout(() => _setSyncBar(null), 2000);
       } else {
@@ -4729,311 +4686,7 @@ function deleteCustomRoutine() {
   cloudSave();
 }
 
-// ── SIGNAL AI ─────────────────────────────────────────────
-let signalConversations = []; // [{date,type,messages:[{role,content}]}]
-let _signalLastMorning = '';
-let _signalLastEvening = '';
-let _signalWaiting = false;
-let _signalCurrentType = null; // 'morning'|'evening'|'manual'
-
-function _getSignalKey() {
-  return localStorage.getItem('uc-signal-key') || '';
-}
-
-function _buildDataSnapshot() {
-  const today = _todayStr();
-  const todayDow = (new Date().getDay()+6)%7;
-
-  // Today's habits
-  const habitSummary = habits.map(h => {
-    const scheduled = (h.days||[]).includes(todayDow);
-    const missedYesterday = _habitMissedYesterday(h);
-    return {
-      name: h.name, done: h.done, scheduled, streak: h.streak,
-      bestStreak: h.bestStreak||0, diff: h.diff, currents: _itemCurrents(h),
-      missedYesterday, consistency: Math.round((h.consistency||0)*100)+'%',
-      label: h.label||''
-    };
-  });
-
-  // Streaks at risk (3+ day streak, scheduled today, not done)
-  const atRisk = habits.filter(h =>
-    h.streak >= 3 && (h.days||[]).includes(todayDow) && !h.done
-  ).map(h => ({ name: h.name, streak: h.streak }));
-
-  // Tasks
-  const taskSummary = tasks.filter(t=>!t.done).map(t => ({
-    text: t.text, priority: t.priority, daysUntilDue: t.daysUntilDue??0,
-    currents: _itemCurrents(t)
-  }));
-
-  // Energy today
-  const todayEnergy = energyCheckins.filter(c=>c.date===today).map(c => ({
-    level: ENERGY_LEVELS[c.level]?.name||'unknown', time: c.timeStr,
-    factors: c.factors
-  }));
-
-  // Currents
-  const currentsSummary = goals.map(g => ({
-    name: g.name, measureCurrent: g.measureCurrent, measureTarget: g.measureTarget,
-    xp: g.xp, xpNext: g.xpNext,
-    subgoals: (g.subgoals||[]).map(s=>({name:s.name,done:s.done}))
-  }));
-
-  // Last 7 days completion rates
-  const weekRates = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate()-i);
-    const key = d.toISOString().split('T')[0];
-    const dow = (d.getDay()+6)%7;
-    let done=0,sched=0;
-    habits.forEach(h => {
-      if (!(h.days||[]).includes(dow)) return;
-      sched++;
-      const completed = i===0 ? h.done : !!(h.completionLog||{})[key];
-      if (completed) done++;
-    });
-    weekRates.push({ date:key, pct: sched>0?Math.round(done/sched*100):null });
-  }
-
-  // Posture sessions (last 14 days)
-  const pxCut = new Date(); pxCut.setDate(pxCut.getDate()-14);
-  const pxCutKey = pxCut.toISOString().split('T')[0];
-  const postureRecent = postureLog.filter(s => s.date >= pxCutKey)
-    .map(s => ({date:s.date, routine:s.routineName}));
-
-  // Last evening reflection
-  const lastEvening = signalConversations
-    .filter(c=>c.type==='evening')
-    .slice(-1)[0];
-
-  return {
-    today, dayOfWeek: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][todayDow],
-    totalXP, level: _calcLevel(totalXP).level,
-    habits: habitSummary, streaksAtRisk: atRisk,
-    openTasks: taskSummary, energyToday: todayEnergy,
-    currents: currentsSummary, weekCompletion: weekRates,
-    postureSessionsLast14Days: postureRecent,
-    lastEveningReflection: lastEvening ? lastEvening.messages : null,
-    vacation
-  };
-}
-
-const SIGNAL_SYSTEM_PROMPT = `You are Signal, the AI companion inside UNDERCURRENT, a synthwave-themed personal productivity RPG. The user's name is Daniel.
-
-Your philosophy:
-- Progress over perfection. 100% consistency is not the goal — showing up most of the time IS the goal.
-- Trends matter more than individual days. A bad day means nothing if the week is solid.
-- Missing a habit is normal and expected. Two misses in a row is the real signal to pay attention to.
-- Energy fluctuates. Low energy days are data, not failure.
-- Small improvements compound. 1% better each week is transformational over months.
-
-Your role:
-- Notice and identify TRENDS over days and weeks, not single-day performance
-- Celebrate consistency even when it's imperfect — "You've hit Gamedev 4 out of 5 days this week, that's a real pattern forming"
-- Connect the dots: link energy factors to habit completion, show cause and effect over time
-- Ask forward-looking questions: what to focus on, what to let go of, what's working
-- Weave in identity framing: "you're becoming someone who..." based on their strongest patterns
-- When things are tough, offer perspective not pressure. Reference Four Thousand Weeks — you can't do everything, and that's okay.
-
-Your tone:
-- Warm, encouraging, honest. Like a friend who genuinely cares and pays attention.
-- Never guilt-trip. Never frame a missed day as failure.
-- Celebrate streaks but don't catastrophize when they break.
-- Be specific — reference actual habit names, streak numbers, energy patterns, and current names.
-
-Keep responses to 3-5 sentences. Conversational, not clinical. No bullet points.`;
-
-async function _callSignal(messages, snapshot) {
-  const key = _getSignalKey();
-  if (!key) {
-    _addSignalMessage('assistant', 'Add your Anthropic API key in Settings to enable Signal.');
-    return;
-  }
-
-  _setSignalLoading(true);
-  try {
-    const systemMsg = SIGNAL_SYSTEM_PROMPT + '\n\nCurrent data snapshot:\n' + JSON.stringify(snapshot, null, 0);
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 400,
-        system: systemMsg,
-        messages: messages
-      })
-    });
-    const data = await resp.json();
-    if (data.error) {
-      _addSignalMessage('assistant', 'Signal error: ' + (data.error.message||'Unknown error'));
-      return;
-    }
-    const text = data.content?.map(c=>c.text||'').join('')||'No response';
-    _addSignalMessage('assistant', text);
-    // Show input for conversation — always allow replies
-    document.getElementById('signal-input-area').style.display = 'block';
-    document.getElementById('signal-input').placeholder = _signalCurrentType === 'evening' ? 'Share your reflection…' : 'Reply to Signal…';
-    document.getElementById('signal-input').focus();
-    // Save conversation
-    _saveSignalConversation();
-  } catch(err) {
-    _addSignalMessage('assistant', 'Connection error — check your API key and try again.');
-  } finally {
-    _setSignalLoading(false);
-  }
-}
-
-function _addSignalMessage(role, content) {
-  const el = document.getElementById('signal-messages');
-  const isUser = role === 'user';
-  el.innerHTML += `<div style="padding:10px 14px;border-radius:10px;font-size:0.8125rem;line-height:1.6;
-    background:${isUser?'rgba(157,127,245,0.1)':'var(--surf)'};
-    border:1px solid ${isUser?'rgba(157,127,245,0.2)':'var(--border)'};
-    color:var(--text);align-self:${isUser?'flex-end':'flex-start'};
-    max-width:92%">${content}</div>`;
-  el.scrollTop = el.scrollHeight;
-  // Track in current conversation
-  if (!_signalCurrentConvo) _signalCurrentConvo = [];
-  _signalCurrentConvo.push({role, content});
-}
-
-let _signalCurrentConvo = [];
-
-function _setSignalLoading(on) {
-  _signalWaiting = on;
-  if (on) {
-    const el = document.getElementById('signal-messages');
-    el.innerHTML += '<div id="signal-loading" style="padding:10px 14px;font-size:0.75rem;color:var(--purple);font-family:\'Share Tech Mono\',monospace">Signal is thinking…</div>';
-    el.scrollTop = el.scrollHeight;
-  } else {
-    const ld = document.getElementById('signal-loading');
-    if (ld) ld.remove();
-  }
-}
-
-function _saveSignalConversation() {
-  if (!_signalCurrentConvo.length) return;
-  const entry = {
-    date: _todayStr(),
-    type: _signalCurrentType || 'manual',
-    messages: [..._signalCurrentConvo],
-    timestamp: Date.now()
-  };
-  signalConversations.push(entry);
-  // Cap at 180 days
-  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-180);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
-  signalConversations = signalConversations.filter(c => c.date >= cutoffStr);
-  cloudSave();
-}
-
-function openSignalPanel() {
-  const el = document.getElementById('signal-messages');
-  el.innerHTML = '';
-  _signalCurrentConvo = [];
-  document.getElementById('signal-input-area').style.display = 'none';
-  document.getElementById('signal-overlay').style.display = 'flex';
-  // Show today's past conversations
-  const todayConvos = signalConversations.filter(c => c.date === _todayStr());
-  if (todayConvos.length) {
-    todayConvos.forEach(c => {
-      const typeLabel = c.type==='morning'?'☀ Morning Brief':c.type==='evening'?'🌙 Evening':'📊 Check-in';
-      el.innerHTML += `<div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;text-align:center;padding:4px">${typeLabel}</div>`;
-      c.messages.forEach(m => {
-        const isUser = m.role === 'user';
-        el.innerHTML += `<div style="padding:8px 12px;border-radius:8px;font-size:0.75rem;line-height:1.5;
-          background:${isUser?'rgba(157,127,245,0.1)':'var(--surf)'};
-          border:1px solid ${isUser?'rgba(157,127,245,0.2)':'var(--border)'};
-          color:${isUser?'var(--text)':'var(--text2)'};align-self:${isUser?'flex-end':'flex-start'};
-          max-width:92%;opacity:0.7">${m.content}</div>`;
-      });
-    });
-    el.innerHTML += '<div style="border-top:1px solid var(--border);margin:8px 0"></div>';
-  }
-  _checkSignalDot();
-}
-
-function closeSignalPanel() {
-  document.getElementById('signal-overlay').style.display = 'none';
-}
-
-function signalMorningBrief() {
-  _signalCurrentType = 'morning';
-  _signalCurrentConvo = [];
-  const el = document.getElementById('signal-messages');
-  // Clear new messages area (keep history)
-  const snapshot = _buildDataSnapshot();
-  const messages = [{
-    role: 'user',
-    content: 'Give me my morning brief. What should I focus on today? Any streaks at risk? How was yesterday?'
-  }];
-  _addSignalMessage('user', '☀ Morning brief');
-  _callSignal(messages, snapshot);
-  _signalLastMorning = _todayStr();
-  cloudSave();
-}
-
-function signalEveningReflect() {
-  _signalCurrentType = 'evening';
-  _signalCurrentConvo = [];
-  const snapshot = _buildDataSnapshot();
-  const messages = [{
-    role: 'user',
-    content: 'It\'s evening. Ask me a reflective question about my day based on the data. Then wait for my response before giving your assessment.'
-  }];
-  _addSignalMessage('user', '🌙 Evening reflection');
-  _callSignal(messages, snapshot);
-  _signalLastEvening = _todayStr();
-  cloudSave();
-}
-
-function signalHowAmIDoing() {
-  _signalCurrentType = 'manual';
-  _signalCurrentConvo = [];
-  const snapshot = _buildDataSnapshot();
-  const messages = [{
-    role: 'user',
-    content: 'Give me an honest assessment of how I\'m doing. Look at my 7-day trend, streaks, energy patterns, and current progress. What patterns do you see? What should I change?'
-  }];
-  _addSignalMessage('user', '📊 How am I doing?');
-  _callSignal(messages, snapshot);
-}
-
-async function sendSignalReply() {
-  const inp = document.getElementById('signal-input');
-  const text = inp.value.trim();
-  if (!text || _signalWaiting) return;
-  inp.value = '';
-  _addSignalMessage('user', text);
-  const snapshot = _buildDataSnapshot();
-  // Build full conversation for context
-  const messages = _signalCurrentConvo.map(m => ({role:m.role, content:m.content}));
-  await _callSignal(messages, snapshot);
-}
-
-function _checkSignalDot() {
-  const dot = document.getElementById('signal-dot');
-  if (!dot) return;
-  const now = new Date();
-  let etHour;
-  try {
-    etHour = parseInt(now.toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}));
-  } catch(e) { etHour = now.getHours(); }
-  const today = _todayStr();
-  const needsMorning = etHour < 12 && _signalLastMorning !== today;
-  const needsEvening = etHour >= 17 && _signalLastEvening !== today;
-  dot.style.display = (needsMorning || needsEvening) ? 'block' : 'none';
-}
-
-function _autoSignalCheck() {
-  _checkSignalDot();
-}
+try { localStorage.removeItem('uc-signal-key'); } catch(e) {}
 
 // ── YESTERDAY POPUP ───────────────────────────────────────
 let _yesterdayChecked = {}; // {habitId: true/false}
@@ -5174,7 +4827,6 @@ setInterval(() => {
 }, 60000);
 // Check yesterday popup after data settles
 setTimeout(_checkYesterdayPopup, 1200);
-_checkSignalDot();
 
 // Bottom nav pagination — update dots on swipe
 (function(){
