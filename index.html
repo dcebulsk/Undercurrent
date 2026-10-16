@@ -227,6 +227,12 @@ body{height:100%;min-height:-webkit-fill-available;background:var(--bg);color:va
 .task-row{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);transition:opacity 0.15s,background 0.15s}
 .drag-handle{font-size:1.125rem;color:var(--border2);cursor:grab;padding:2px 2px 0 0;flex-shrink:0;touch-action:none;user-select:none;line-height:1;letter-spacing:-1px}
 .drag-handle:active{cursor:grabbing;color:var(--purple)}
+.subtask-list{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+.subtask-row{display:flex;align-items:center;gap:8px;font-size:0.75rem;color:var(--text2);cursor:pointer;padding:2px 0}
+.subtask-row .scheck{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.5625rem;color:#fff;transition:all 0.15s}
+.subtask-row.done .scheck{background:var(--teal);border-color:var(--teal)}
+.subtask-row.done span.st{text-decoration:line-through;color:var(--text3)}
+.st-prog{display:inline-block;font-size:0.625rem;font-family:'Share Tech Mono',monospace;color:var(--text3);margin-left:8px}
 .habit-row.has-lbl,.task-row.has-lbl,.daily-row.has-lbl{position:relative;padding-left:11px;background:var(--ltint)}
 .habit-row.has-lbl::before,.task-row.has-lbl::before,.daily-row.has-lbl::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--lbar)}
 .habit-row.missed-warning.has-lbl::before{display:none}
@@ -573,6 +579,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="card card-accent" id="daily-card">
         <div class="card-title" style="cursor:pointer;user-select:none" onclick="toggleDailyCollapse()">// current tasks
           <div style="display:flex;align-items:center;gap:10px">
+            <span id="daily-count-lbl" style="font-size:0.625rem;color:var(--purple);font-family:'Share Tech Mono',monospace;font-weight:400"></span>
             <span id="daily-reset-lbl" style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;font-weight:400">resets at midnight</span>
             <span id="daily-chevron" style="font-size:0.8125rem;color:var(--text3);transition:transform 0.2s;display:inline-block">▾</span>
           </div>
@@ -1003,6 +1010,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <button class="opt-btn" onclick="startVoiceTask()" title="Dictate" style="padding:0 12px;flex-shrink:0">🎙</button>
     </div>
     <div id="qt-heard" style="display:none;font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:5px"></div>
+    <div id="qt-hint" style="display:none;font-size:0.6875rem;color:var(--text2);margin-top:6px;padding:7px 10px;background:color-mix(in srgb,var(--purple) 10%,transparent);border:1px solid color-mix(in srgb,var(--purple) 30%,transparent);border-radius:8px;line-height:1.5"></div>
     <div class="modal-section">Current</div>
     <div class="opt-row" id="qt-current-opts" style="flex-wrap:wrap;gap:6px"></div>
     <div class="modal-section">Due Date <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
@@ -1035,6 +1043,12 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
     <input class="field-input" id="task-due-input" type="date">
     <div class="modal-section">Notes <span style="color:var(--text3);font-size:0.6875rem">(optional)</span></div>
     <textarea class="field-input" id="task-notes-input" placeholder="Links, context, things to check out later…" style="min-height:70px;resize:vertical;font-family:inherit;line-height:1.5"></textarea>
+    <div class="modal-section">Subtasks <span style="color:var(--text3);font-size:0.6875rem">(completing all of them completes the task)</span></div>
+    <div id="task-subtask-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px"></div>
+    <div style="display:flex;gap:6px">
+      <input class="field-input" id="task-subtask-input" placeholder="e.g. Dishes" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();_addEditSubtask();}">
+      <button class="opt-btn active" onclick="_addEditSubtask()" style="white-space:nowrap">+ Add</button>
+    </div>
     <button class="modal-save" onclick="saveTask()">Save Task</button>
     <button class="modal-delete" id="task-delete-btn" style="display:none" onclick="deleteItem('task')">Delete Task</button>
   </div>
@@ -1113,6 +1127,10 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
 <div class="modal-overlay" id="modal-settings">
   <div class="modal">
     <div class="modal-title">Settings<button class="modal-close" onclick="closeModal('settings')">✕</button></div>
+
+    <div class="modal-section">Current Tasks Limit</div>
+    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">How many tasks you can pin to Current Tasks at once.</div>
+    <div class="opt-row" id="pin-limit-opts" style="flex-wrap:wrap;gap:6px"></div>
 
     <div class="modal-section">Mantras &amp; Reminders</div>
     <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">Shown at the top of the app — a random one on load, tap ‹ › to cycle.</div>
@@ -1220,6 +1238,7 @@ function _todayStr() {
 
 function _initDailyReset() {
   const today = _todayStr();
+  tasks.forEach(t=>{ if(t.done && pinnedTaskIds.has(t.id)) pinnedTaskIds.delete(t.id); });
   if (dailyTaskDate !== today) {
     dailyTaskIds = new Set([...pinnedTaskIds]);
     dailyTaskDate = today;
@@ -1262,15 +1281,24 @@ function _saveDailyState() {
   localStorage.setItem('uc-daily-date', dailyTaskDate);
 }
 
+let pinLimit = 0; // 0 = no limit
+function _pinFull(){ return pinLimit>0 && dailyTaskIds.size >= pinLimit; }
+function _pinFullMsg(){ showToast(`Current Tasks is full (${pinLimit}). Remove one, or raise the limit in Settings.`); }
+function _renderPinLimitOpts(){
+  const el=document.getElementById('pin-limit-opts'); if(!el) return;
+  el.innerHTML=[3,5,7,10,0].map(n=>`<div class="opt-btn${pinLimit===n?' active':''}" onclick="setPinLimit(${n})">${n||'No limit'}</div>`).join('');
+}
+function setPinLimit(n){
+  pinLimit=n; _renderPinLimitOpts(); renderDailyTasks(); cloudSave();
+  if (pinLimit>0 && dailyTaskIds.size>pinLimit) showToast(`You have ${dailyTaskIds.size} pinned — new pins are blocked until you're under ${pinLimit}.`);
+}
+
 function togglePin(id) {
   if (pinnedTaskIds.has(id)) {
     pinnedTaskIds.delete(id);
     dailyTaskIds.delete(id);
   } else {
-    if (dailyTaskIds.size >= 3 && !dailyTaskIds.has(id)) {
-      showToast('Already have 3 tasks today. Remove one first.');
-      return;
-    }
+    if (_pinFull() && !dailyTaskIds.has(id)) { _pinFullMsg(); return; }
     pinnedTaskIds.add(id);
     dailyTaskIds.add(id);
   }
@@ -1283,10 +1311,9 @@ function addToDaily(id) {
     dailyTaskIds.delete(id);
     pinnedTaskIds.delete(id);
   } else {
-    if (dailyTaskIds.size >= 3) {
-      showToast('Already have 3 tasks today. Remove one first.');
-      return;
-    }
+    const tt=tasks.find(x=>x.id===id);
+    if (tt && tt.done) { showToast('That task is already complete'); return; }
+    if (_pinFull()) { _pinFullMsg(); return; }
     dailyTaskIds.add(id);
   }
   _saveDailyState();
@@ -1402,12 +1429,43 @@ function openQuickTask(prefill){
   document.getElementById('qt-name').value = p.text || '';
   document.getElementById('qt-due').value = (p.days!==undefined && p.days!==null) ? _isoInDays(p.days) : '';
   const heard=document.getElementById('qt-heard');
-  if (p.heard){ heard.style.display='block'; heard.textContent='heard: "'+p.heard+'"'; } else heard.style.display='none';
+  if (p.heard){ heard.style.display='block'; heard.style.color='var(--text3)'; heard.textContent='heard: "'+p.heard+'"'; } else heard.style.display='none';
+  const hint=document.getElementById('qt-hint');
+  if (p.hint){ hint.style.display='block'; hint.innerHTML=p.hint; } else hint.style.display='none';
+  _qtParsed = !!p.heard;   // voice entries are already parsed
   _renderCurrentPicker('qt-current-opts', p.currents || []);
   if (!document.getElementById('modal-quick-task').classList.contains('open')) openModal('quick-task');
   setTimeout(()=>{ const i=document.getElementById('qt-name'); i.focus(); i.setSelectionRange(i.value.length,i.value.length); },50);
 }
+let _qtParsed=false;
 function saveQuickTask(){
+  const nameEl=document.getElementById('qt-name');
+  const raw=nameEl.value.trim();
+  if(!raw){showToast('Give the task a name');return;}
+  if(!_qtParsed){
+    _qtParsed=true;
+    const p=_parseVoiceTask(raw);
+    const found=[];
+    if(p.days!==null && !document.getElementById('qt-due').value){
+      document.getElementById('qt-due').value=_isoInDays(p.days);
+      found.push('due '+(p.days===0?'today':p.days===1?'tomorrow':'in '+p.days+' days'));
+    }
+    const sel=_pickerSel('qt-current-opts'), add=p.currents.filter(n=>!sel.includes(n));
+    if(add.length){ _renderCurrentPicker('qt-current-opts',[...sel,...add]); found.push(add.join(' + ')); }
+    const nameChanged = p.text && p.text!==raw;
+    if(found.length || nameChanged){
+      if(p.text) nameEl.value=p.text;
+      const heard=document.getElementById('qt-heard');
+      heard.style.display='block'; heard.style.color='var(--teal)';
+      heard.textContent=(found.length?'picked up: '+found.join(' · ')+' — ':'')+'check it, then press Enter again to add';
+      document.getElementById('qt-hint').style.display='none';
+      setTimeout(()=>nameEl.focus(),30);
+      return;
+    }
+  }
+  _commitQuickTask();
+}
+function _commitQuickTask(){
   const text=document.getElementById('qt-name').value.trim();
   if(!text){showToast('Give the task a name');return;}
   const dueVal=document.getElementById('qt-due').value;
@@ -1425,7 +1483,15 @@ function saveQuickTask(){
 let _voiceRec = null, _voiceFinal = '';
 function startVoiceTask(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { showToast('Voice input needs Chrome or Edge'); return; }
+  if (!SR) {
+    // Firefox & others: use the keyboard's own dictation, then parse on Enter
+    const kb='🎙 Tap the <strong>mic on your keyboard</strong> and speak. Dates and Currents ("tomorrow", "for SynthEscape") are picked up when you press Enter.';
+    if (document.getElementById('modal-quick-task').classList.contains('open')) {
+      const h=document.getElementById('qt-hint'); h.style.display='block'; h.innerHTML=kb;
+      _qtParsed=false; setTimeout(()=>document.getElementById('qt-name').focus(),30);
+    } else openQuickTask({hint:kb});
+    return;
+  }
   if (_voiceRec) { stopVoiceTask(); return; }
   _voiceFinal = '';
   const r = new SR();
@@ -1456,7 +1522,8 @@ function _parseVoiceTask(raw){
   const compact = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
   let s = ' ' + raw.trim().replace(/[.!?]+$/,'') + ' ';
   // Strip lead-in phrases ("add a note, …", "remind me to …")
-  s = s.replace(/^\s*(please\s+)?((add|make|create|new)\s+(a\s+|an\s+)?(note|task|to-?do|reminder)(\s+to)?|remind me to|note to self|note|task|to-?do|add)\b[\s,:-]*/i,' ');
+  s = s.replace(/^\s*(please\s+)?((add|make|create|new)\s+(a\s+|an\s+)?(note|task|to-?do|reminder)(\s+to)?|remind me to|note to self)\b[\s,:-]*/i,' ');
+  s = s.replace(/^\s*(add|note|task|to-?do)\s*[,:-]+\s*/i,' ');
 
   // ── Due date ──
   let days = null;
@@ -1542,6 +1609,7 @@ function addMantra() {
   mantras.push(val);
   inp.value = '';
   _renderSettingsMantras();
+  _renderPinLimitOpts();
   renderMantraBanner();
   cloudSave();
 }
@@ -2187,6 +2255,9 @@ function prepTaskModal(id) {
   document.getElementById('task-modal-title').textContent = t ? 'Edit Task' : 'New Task';
   document.getElementById('task-name-input').value = t ? t.text : '';
   document.getElementById('task-notes-input').value = t ? (t.notes || '') : '';
+  _editSubtasks = t && Array.isArray(t.subtasks) ? t.subtasks.map(s=>({...s})) : [];
+  document.getElementById('task-subtask-input').value='';
+  _renderEditSubtasks();
   _renderCurrentPicker('task-current-opts', t ? _itemCurrents(t) : []);
   document.getElementById('task-delete-btn').style.display = t ? 'block' : 'none';
   const today = new Date();
@@ -2217,16 +2288,29 @@ function saveTask() {
   const daysUntilDue = dueVal ? Math.round((new Date(dueVal+'T00:00:00')-today)/86400000) : null;
   const _cur = _getCurrentPick('task-current-opts');
   const goal = _cur[0]||'';
+  const _cleanSubs = _editSubtasks.map(s=>({...s,text:String(s.text).trim()})).filter(s=>s.text);
+  let _pendingToggle = null;
   const label = '';
   if (editingId !== null) {
     const t = tasks.find(x=>x.id===editingId);
-    if (t) { Object.assign(t,{text,priority,daysUntilDue,label:label||'',notes}); _setItemCurrents(t,_cur); }
+    if (t) {
+      Object.assign(t,{text,priority,daysUntilDue,label:label||'',notes,subtasks:_cleanSubs});
+      _setItemCurrents(t,_cur);
+      // Editing subtasks can change completion: all done → complete; any open on a done task → reopen
+      if (_cleanSubs.length) {
+        const all=_cleanSubs.every(s=>s.done);
+        if (all && !t.done) _pendingToggle=t.id;
+        else if (!all && t.done) _pendingToggle=t.id;
+      }
+    }
   } else {
-    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,currents:_cur,done:false,label:label||'',notes});
+    tasks.push({id:nextTaskId++,text,priority,daysUntilDue,goal,currents:_cur,done:false,subtasks:_cleanSubs,label:label||'',notes});
   }
   closeModal('add-task');
+  if (_pendingToggle!==null) toggleTask(_pendingToggle, null);
   renderTasks(); renderDailyTasks();
   updateXPBar();
+  cloudSave();
 }
 
 function sortTasks(type,el) {
@@ -2311,7 +2395,8 @@ function taskRowHTML(t) {
       <div class="task-text${t.done?' done':''}" onclick="openModal('add-task',${t.id})">${t.text}</div>
       ${_itemCurrents(t).length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">${_currentBadges(t)}</div>`:''}
       ${t.notes?`<div style="margin-top:4px;font-size:0.6875rem;color:var(--text3);line-height:1.5;white-space:pre-wrap;padding-left:8px;border-left:2px solid var(--border2)">${t.notes.replace(/</g,'&lt;')}</div>`:''}
-      <div class="task-due-row"><span class="task-due ${dueCls}">${dueTxt}</span>${overdue}</div>
+      ${(t.subtasks||[]).length?`<div class="subtask-list">${t.subtasks.map(s=>`<div class="subtask-row${s.done?' done':''}" onclick="toggleSubtask(${t.id},${s.id})"><div class="scheck">${s.done?'✓':''}</div><span class="st">${String(s.text).replace(/</g,'&lt;')}</span></div>`).join('')}</div>`:''}
+      <div class="task-due-row"><span class="task-due ${dueCls}">${dueTxt}</span>${(t.subtasks||[]).length?`<span class="st-prog">☑ ${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>`:''}${overdue}</div>
     </div>
     <button class="star-btn ${inDaily?'starred':''}" onclick="addToDaily(${t.id})" title="${inDaily?'Remove from today':'Add to today'}">📌</button>
   </div>`;
@@ -2378,6 +2463,8 @@ function renderDailyTasks() {
 
   const count = dailyTasks.length;
   empty.style.display = count > 0 ? 'none' : 'block';
+  const cl=document.getElementById('daily-count-lbl');
+  if (cl) cl.textContent = pinLimit>0 ? `${count}/${pinLimit}` : (count?`${count} pinned`:'');
 
   if (!count) { list.innerHTML = ''; return; }
 
@@ -2401,6 +2488,7 @@ function renderDailyTasks() {
         <div class="daily-task-meta">
           <span class="task-due ${dueCls}">${dueTxt}</span>
           ${isPinned ? '<span style="color:var(--amber);margin-left:8px">📌 pinned</span>' : ''}
+          ${(t.subtasks||[]).length ? `<span class="st-prog">☑ ${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>` : ''}
           ${_itemCurrents(t).length ? `<span style="margin-left:8px">${_currentBadges(t)}</span>` : ''}
           ${t.done && _dailyRemoveTimers[t.id] ? `<span style="color:var(--teal);margin-left:8px;cursor:pointer;text-decoration:underline" onclick="cancelAutoRemove(${t.id})">undo</span>` : ''}
         </div>
@@ -2419,6 +2507,37 @@ function renderDailyTasks() {
 }
 
 const _dailyRemoveTimers = {}; // id -> timeout
+const _unpinnedOnDone = {};    // id -> true while undo is possible
+
+function toggleSubtask(tid, sid){
+  const t=tasks.find(x=>x.id===tid); if(!t) return;
+  const s=(t.subtasks||[]).find(x=>x.id===sid); if(!s) return;
+  s.done=!s.done;
+  const allDone=t.subtasks.every(x=>x.done);
+  if (allDone && !t.done) { toggleTask(tid, null); showToast(`All subtasks done — "${t.text}" complete`); return; }
+  if (!s.done && t.done) { toggleTask(tid, null); return; } // reopen parent
+  if (s.done) playHabitTaskSound();
+  renderTasks(); renderDailyTasks(); cloudSave();
+}
+
+// ── Subtask editor (task modal) ──
+let _editSubtasks = [];
+function _renderEditSubtasks(){
+  const el=document.getElementById('task-subtask-list'); if(!el) return;
+  el.innerHTML=_editSubtasks.map((s,i)=>`<div style="display:flex;align-items:center;gap:6px">
+    <div onclick="_editSubtasks[${i}].done=!_editSubtasks[${i}].done;_renderEditSubtasks()" style="width:16px;height:16px;border-radius:4px;border:1.5px solid ${s.done?'var(--teal)':'var(--border2)'};background:${s.done?'var(--teal)':'transparent'};color:#fff;font-size:0.625rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">${s.done?'✓':''}</div>
+    <input class="field-input" value="${String(s.text).replace(/"/g,'&quot;')}" oninput="_editSubtasks[${i}].text=this.value" style="flex:1;padding:6px 10px;font-size:0.8125rem">
+    <span onclick="_rbSub(${i},-1)" style="cursor:pointer;color:var(--text3);padding:0 2px">↑</span>
+    <span onclick="_rbSub(${i},1)" style="cursor:pointer;color:var(--text3);padding:0 2px">↓</span>
+    <span onclick="_editSubtasks.splice(${i},1);_renderEditSubtasks()" style="cursor:pointer;color:#ef4444;padding:0 2px">×</span>
+  </div>`).join('');
+}
+function _rbSub(i,d){ const j=i+d; if(j<0||j>=_editSubtasks.length) return; [_editSubtasks[i],_editSubtasks[j]]=[_editSubtasks[j],_editSubtasks[i]]; _renderEditSubtasks(); }
+function _addEditSubtask(){
+  const inp=document.getElementById('task-subtask-input'); const v=inp.value.trim(); if(!v) return;
+  const maxId=_editSubtasks.reduce((m,s)=>Math.max(m,s.id||0),0);
+  _editSubtasks.push({id:maxId+1,text:v,done:false}); inp.value=''; _renderEditSubtasks(); inp.focus();
+}
 
 function toggleTask(id, sourceEl){
   const t=tasks.find(x=>x.id===id);
@@ -2426,14 +2545,20 @@ function toggleTask(id, sourceEl){
   t.done=!t.done;
   const xpAmt = XP_TASK[t.priority] || 20;
   if (t.done) {
+    // Checking the parent completes every subtask
+    (t.subtasks||[]).forEach(s=>s.done=true);
     _addXP(xpAmt, sourceEl);
     playHabitTaskSound();
     _itemCurrents(t).forEach(n=>_awardLinkedCurrentXP(n, xpAmt));
+    // Completed tasks are unpinned straight away (remembered so undo can restore it)
+    if (pinnedTaskIds.has(id)) { pinnedTaskIds.delete(id); _unpinnedOnDone[id]=true; }
     if (dailyTaskIds.has(id)) _scheduleAutoRemove(id);
+    _saveDailyState();
   } else {
     _removeXP(xpAmt);
     _itemCurrents(t).forEach(n=>_removeCurrentXP(n, xpAmt));
     if (_dailyRemoveTimers[id]) { clearTimeout(_dailyRemoveTimers[id]); delete _dailyRemoveTimers[id]; }
+    if (_unpinnedOnDone[id]) { pinnedTaskIds.add(id); dailyTaskIds.add(id); delete _unpinnedOnDone[id]; _saveDailyState(); }
   }
   renderTasks(); renderDailyTasks();
   cloudSave();
@@ -2446,6 +2571,7 @@ function _scheduleAutoRemove(id) {
   if (row) row.classList.add('daily-completing');
   _dailyRemoveTimers[id] = setTimeout(() => {
     delete _dailyRemoveTimers[id];
+    delete _unpinnedOnDone[id];
     dailyTaskIds.delete(id);
     pinnedTaskIds.delete(id);
     _saveDailyState();
@@ -3631,6 +3757,7 @@ function _doCloudSave() {
     habitCompletions, vacation,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
+    pinLimit,
     dailyTaskIds:  [...dailyTaskIds],
     dailyTaskDate,
     energyDate: _todayStr(),
@@ -3707,6 +3834,7 @@ function _loadFromCloud(uid) {
         nextHabitId      = d.nextHabitId      ?? 1;
         nextTaskId       = d.nextTaskId       ?? 1;
         pinnedTaskIds    = new Set(d.pinnedTaskIds ?? []);
+        if (typeof d.pinLimit === 'number') pinLimit = d.pinLimit;
         // Normalize habit fields that may be missing on older records
         habits = habits.map(h => ({
           ...h,
