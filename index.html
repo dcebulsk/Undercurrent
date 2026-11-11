@@ -459,6 +459,9 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="sidebar-item" id="snav-review" onclick="showPage('review',this)">
         <span class="sidebar-icon">📊</span>Review
       </div>
+      <div class="sidebar-item" id="snav-magfest" onclick="showPage('magfest',this)">
+        <span class="sidebar-icon">🕹</span>MAGFest
+      </div>
       <div class="sidebar-bottom">
         <div class="sidebar-flux">
           <div class="sidebar-flux-lbl">// vacation mode</div>
@@ -700,6 +703,30 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       </div>
     </div>
 
+    <!-- MAGFEST -->
+    <div class="page" id="page-magfest">
+      <div class="card card-accent">
+        <div class="card-title">// magfest 2027 · jan 7–10</div>
+        <div id="mf-countdown"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">// today</div>
+        <div id="mf-today" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div id="mf-week" style="margin-top:14px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">// booth prep</div>
+        <div id="mf-prep" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">// home session · band only</div>
+        <div style="font-size:0.75rem;color:var(--text2);line-height:1.8">
+          Band rows ×12–15 · Prone Y and T raises ×8 each · Incline push-ups ×8–12 · Glute bridges ×15 · Dead bugs ×8/side<br>
+          <span style="color:var(--text3)">Posture routine: chin tucks ×10 · wall angels ×10 · thoracic extension 1 min · doorway pec stretch 30s/side · band pull-aparts ×15. Swap in your PT's exercises if they gave you different ones.</span>
+        </div>
+      </div>
+    </div>
+
     <!-- POSTURE -->
     <div class="page" id="page-posture">
       <div class="card card-accent">
@@ -865,7 +892,7 @@ select.field-input{appearance:none;-webkit-appearance:none;background-image:url(
       <div class="bnav-page">
         <div class="bnav-item" id="bnav-posture" onclick="showPage('posture',this)"><div class="bnav-icon">🧍</div><div class="bnav-label">Posture</div></div>
         <div class="bnav-item" id="bnav-review" onclick="showPage('review',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Review</div></div>
-        <div class="bnav-item" style="visibility:hidden;pointer-events:none"><div class="bnav-icon">·</div><div class="bnav-label"> </div></div>
+        <div class="bnav-item" id="bnav-magfest" onclick="showPage('magfest',this)"><div class="bnav-icon">🕹</div><div class="bnav-label">MAGFest</div></div>
         <div class="bnav-item" style="visibility:hidden;pointer-events:none"><div class="bnav-icon">·</div><div class="bnav-label"> </div></div>
         <div class="bnav-item" style="visibility:hidden;pointer-events:none"><div class="bnav-icon">·</div><div class="bnav-label"> </div></div>
       </div>
@@ -1622,7 +1649,7 @@ function _bnavUpdateDots() {
 }
 
 // Which nav page each section lives on
-const _BNAV_PAGES = { goals:0, habits:0, tasks:0, focus:0, energy:0, posture:1, review:1 };
+const _BNAV_PAGES = { goals:0, habits:0, tasks:0, focus:0, energy:0, posture:1, review:1, magfest:1 };
 
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1636,6 +1663,7 @@ function showPage(id) {
   document.getElementById('content').scrollTop = 0;
   if (id === 'review') buildReview();
   if (id === 'posture') renderPosture();
+  if (id === 'magfest') renderMagfest();
   if (id === 'energy') renderCheckinHistory();
   if (id === 'habits') _resetToToday();
   // Pull the correct nav page into view
@@ -3770,6 +3798,7 @@ function _doCloudSave() {
     energyFactors, energyCheckins, checkinState,
     postureLog, customExercises, customRoutines, _nextCustomExId, _nextCustomRoutineId,
     habitCompletions, vacation,
+    magfestLog, magfestPrep,
     nextGoalId, nextHabitId, nextTaskId,
     pinnedTaskIds: [...pinnedTaskIds],
     pinLimit,
@@ -3845,6 +3874,8 @@ function _loadFromCloud(uid, opts = {}) {
         if (d.lastSeenLevel !== undefined) _lastLevel = d.lastSeenLevel;
         energyCheckins   = Array.isArray(d.energyCheckins) ? d.energyCheckins : [];
         postureLog = Array.isArray(d.postureLog) ? d.postureLog : [];
+        magfestLog  = (d.magfestLog  && typeof d.magfestLog  === 'object') ? d.magfestLog  : {};
+        magfestPrep = (d.magfestPrep && typeof d.magfestPrep === 'object') ? d.magfestPrep : {};
         customExercises = (d.customExercises && typeof d.customExercises==='object') ? d.customExercises : {};
         customRoutines = Array.isArray(d.customRoutines) ? d.customRoutines : [];
         if (d._nextCustomExId) _nextCustomExId = d._nextCustomExId;
@@ -3940,6 +3971,7 @@ function _rebuildAll() {
   renderCheckinLog();
   renderCheckinHistory();
   renderPosture();
+  renderMagfest();
   if (mantras.length) _mantraIdx = Math.floor(Math.random()*mantras.length);
   renderMantraBanner();
   _renderLabelFilterChips();
@@ -4779,6 +4811,151 @@ function deleteCustomRoutine() {
 }
 
 try { localStorage.removeItem('uc-signal-key'); } catch(e) {}
+
+// ── MAGFEST PREP ──────────────────────────────────────────
+// Daily fitness checklist + booth prep list for Super MAGFest 2027 (Jan 7–10).
+// magfestLog:  { 'YYYY-MM-DD': { posture:true, walk:true, strength:true, bjj:true } }
+// magfestPrep: { <prep item id>: true }   (one-off booth tasks, done or not)
+let magfestLog  = {};
+let magfestPrep = {};
+const MF_START = '2026-11-10';
+const MF_EVENT = '2027-01-07';
+const MF_XP = 15;
+
+function _mfLocalDate(d) {           // local calendar date (not UTC)
+  const z = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+}
+function _mfDate(str) { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d); }
+function _mfDaysBetween(a, b) { return Math.round((_mfDate(b) - _mfDate(a)) / 86400000); }
+
+// Phase by week of the plan
+function _mfPhase(dateStr) {
+  const wk = Math.floor(_mfDaysBetween(MF_START, dateStr) / 7) + 1;
+  if (dateStr >= '2026-12-29') return { wk, name: 'Taper', rounds: 2, steps: '7k', note: 'Nothing new or hard. Show up fresh.' };
+  if (wk <= 2) return { wk, name: 'Build habit', rounds: 2, steps: '6–7k', note: 'Just show up.' };
+  if (wk <= 6) return { wk, name: 'Build', rounds: 3, steps: '8–10k', note: 'Three rounds, more steps.' };
+  return { wk, name: 'Hold steady', rounds: 3, steps: '8–10k', note: 'Keep it going, no new stuff.' };
+}
+
+// Items for a given date. Mon=1 … Sun=0
+function _mfItemsFor(dateStr) {
+  const dow = _mfDate(dateStr).getDay();
+  const ph = _mfPhase(dateStr);
+  const items = [{ key: 'posture', label: 'Posture routine', sub: '10 min, morning' }];
+  const walk = { 1: 30, 4: 30, 5: 45, 6: 60 }[dow];
+  if (walk) items.push({ key: 'walk', label: 'Walk ' + walk + ' min', sub: 'aim ' + ph.steps + ' steps' });
+  else if (dow !== 0) items.push({ key: 'walk', label: 'Steps', sub: 'aim ' + ph.steps });
+  if (dow === 1 || dow === 4 || dow === 6)
+    items.push({ key: 'strength', label: 'Home strength session', sub: ph.rounds + ' rounds' + (ph.name === 'Taper' ? ', easy' : '') });
+  if (dow === 2 || dow === 3)
+    items.push({ key: 'bjj', label: 'BJJ 6am', sub: 'optional · chest stretch after' });
+  return items;
+}
+
+const MF_PREP = [
+  { id: 'shipment', label: 'Get tracking on the Alibaba booth print shipment', due: '2026-11-17' },
+  { id: 'tokens',   label: 'Order arcade tokens and tournament medals',        due: '2026-11-17' },
+  { id: 'qr',       label: 'Make Steam / demo QR code for backdrop and table', due: '2026-11-24' },
+  { id: 'vgmlic',   label: 'Check sample pack license allows performance use', due: '2026-11-24' },
+  { id: 'vgm',      label: 'Submit track to Indie VGM Showcase',               due: '2026-12-01' },
+  { id: 'scoreqr',  label: 'Demo build with QR score submission',              due: '2026-12-08' },
+  { id: 'kiosk',    label: 'Kiosk mode: auto-launch, attract, clean reset, no exit', due: '2026-12-08' },
+  { id: 'board',    label: 'Leaderboard works offline on both machines',       due: '2026-12-13' },
+  { id: 'coop',     label: 'Finish 2P end-game score screen',                  due: '2026-12-13' },
+  { id: 'runlen',   label: 'Decide booth run length / lives cap',              due: '2026-12-13' },
+  { id: 'playtest', label: 'Playtest booth build at the December meetup',      due: '2026-12-20' },
+  { id: 'freeze',   label: 'Feature freeze the booth build',                   due: '2026-12-20' },
+  { id: 'dryrun',   label: 'Full booth dry run at home with both mini PCs',    due: '2027-01-02' },
+  { id: 'spares',   label: 'Pack spares: controllers, cables, power strips, USB build', due: '2027-01-05' },
+];
+
+function _mfShort(dateStr) {
+  return _mfDate(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function _mfRow(checked, label, sub, onclick, tone) {
+  const color = tone || 'var(--purple)';
+  return `<div onclick="${onclick}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:${checked ? 'var(--surf2)' : 'transparent'}">
+    <div style="width:20px;height:20px;flex:none;border-radius:5px;border:1.5px solid ${checked ? color : 'var(--text3)'};background:${checked ? color : 'transparent'};display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:0.75rem">${checked ? '✓' : ''}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:0.8125rem;color:${checked ? 'var(--text3)' : 'var(--text)'};${checked ? 'text-decoration:line-through' : ''}">${label}</div>
+      ${sub ? `<div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:2px">${sub}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderMagfest() {
+  const el = document.getElementById('mf-today');
+  if (!el) return;
+  const today = _mfLocalDate(new Date());
+  const days = _mfDaysBetween(today, MF_EVENT);
+  const ph = _mfPhase(today);
+  const cd = document.getElementById('mf-countdown');
+  if (days > 0) {
+    cd.innerHTML = `<div style="display:flex;align-items:baseline;gap:10px">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:2.25rem;font-weight:700;color:var(--purple);line-height:1">${days}</div>
+        <div style="font-size:0.75rem;color:var(--text2)">day${days === 1 ? '' : 's'} to go</div></div>
+      <div style="font-size:0.6875rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:6px">WEEK ${Math.max(1, ph.wk)} · ${ph.name.toUpperCase()} · ${ph.note}</div>`;
+  } else if (days >= -3) {
+    cd.innerHTML = `<div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;color:var(--amber)">It's MAGFest. Go get 'em.</div>`;
+  } else {
+    cd.innerHTML = `<div style="font-size:0.8125rem;color:var(--text2)">MAGFest 2027 is done.</div>`;
+  }
+
+  // Today
+  const log = magfestLog[today] || {};
+  el.innerHTML = _mfItemsFor(today).map(it =>
+    _mfRow(!!log[it.key], it.label, it.sub, `toggleMagfestDaily('${it.key}')`)).join('');
+
+  // Last 7 days strip
+  const strip = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = _mfLocalDate(d);
+    const items = _mfItemsFor(ds);
+    const done = items.filter(it => (magfestLog[ds] || {})[it.key]).length;
+    const pct = items.length ? done / items.length : 0;
+    const bg = ds < MF_START ? 'var(--dim)' : pct >= 1 ? 'var(--purple)' : pct > 0 ? 'var(--purple3)' : 'var(--surf2)';
+    strip.push(`<div style="flex:1;text-align:center">
+      <div style="height:22px;border-radius:5px;background:${bg};border:1px solid var(--border)"></div>
+      <div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:3px">${'SMTWTFS'[d.getDay()]}</div></div>`);
+  }
+  document.getElementById('mf-week').innerHTML =
+    `<div style="font-size:0.5625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;letter-spacing:1px;margin-bottom:6px">LAST 7 DAYS</div>
+     <div style="display:flex;gap:4px">${strip.join('')}</div>`;
+
+  // Booth prep: open items by due date, done items at the bottom
+  const open = MF_PREP.filter(p => !magfestPrep[p.id]).sort((a, b) => a.due.localeCompare(b.due));
+  const done = MF_PREP.filter(p => magfestPrep[p.id]);
+  document.getElementById('mf-prep').innerHTML =
+    `<div style="font-size:0.625rem;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-bottom:2px">${done.length}/${MF_PREP.length} DONE</div>` +
+    open.map(p => {
+      const late = p.due < today, soon = !late && _mfDaysBetween(today, p.due) <= 3;
+      const sub = late ? `<span style="color:var(--red)">overdue · was due ${_mfShort(p.due)}</span>`
+                : soon ? `<span style="color:var(--amber)">due ${_mfShort(p.due)}</span>` : 'by ' + _mfShort(p.due);
+      return _mfRow(false, p.label, sub, `toggleMagfestPrep('${p.id}')`);
+    }).join('') +
+    done.map(p => _mfRow(true, p.label, '', `toggleMagfestPrep('${p.id}')`, 'var(--teal)')).join('');
+}
+
+function toggleMagfestDaily(key) {
+  const today = _mfLocalDate(new Date());
+  const log = magfestLog[today] || (magfestLog[today] = {});
+  log[key] = !log[key];
+  if (log[key]) { _addXP(MF_XP); playHabitTaskSound(); }
+  else _removeXP(MF_XP);
+  renderMagfest();
+  cloudSave();
+}
+
+function toggleMagfestPrep(id) {
+  magfestPrep[id] = !magfestPrep[id];
+  if (!magfestPrep[id]) delete magfestPrep[id];
+  if (magfestPrep[id]) _addXP(25); else _removeXP(25);
+  renderMagfest();
+  cloudSave();
+}
 
 // ── YESTERDAY POPUP ───────────────────────────────────────
 let _yesterdayChecked = {}; // {habitId: true/false}
