@@ -3619,7 +3619,13 @@ function signInWithGoogle() {
 }
 
 function signOut() {
-  auth.signOut();
+  // Push any unsaved change before signing out, then reset sync state
+  const pending = _saveTimer ? _doCloudSave() : Promise.resolve();
+  Promise.resolve(pending).finally(() => {
+    _cloudLoaded = false;
+    _lastSaveId = null;
+    auth.signOut();
+  });
 }
 
 function handleAuthClick() {
@@ -3677,12 +3683,54 @@ function _setSyncBar(msg, color) {
 }
 
 // ── Save to Firestore ──────────────────────────────────────
+// Sync state
+//   _cloudLoaded   true only after a successful load from Firestore. Saves are
+//                  blocked until then so an empty/default state can never
+//                  overwrite real cloud data (slow load, failed load).
+//   _lastSaveId    id of the version this device last loaded or wrote. Each save
+//                  writes a new saveId; a different id in the cloud means
+//                  another device saved since.
+//   _saveInFlight  a write has been sent but not confirmed yet.
+//   _editedDuringLoad  the user changed something while a refresh was fetching;
+//                  local state wins and the refresh result is discarded.
 let _saveTimer = null;
+let _cloudLoaded = false;
+let _lastSaveId = null;
+let _saveInFlight = false;
+let _loadInFlight = false;
+let _editedDuringLoad = false;
+let _retryTimer = null;
+
 function cloudSave() {
   if (!_currentUser || _offlineMode) return;
+  if (_loadInFlight) _editedDuringLoad = true;
+  if (!_cloudLoaded) return; // never save before real data has loaded
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(_doCloudSave, 1500); // debounce 1.5s
 }
+
+// Save immediately if a debounced save is waiting (app hidden / closing)
+function _flushSave() {
+  if (_saveTimer) _doCloudSave();
+}
+
+// Pull newer data from the cloud when coming back to the app
+function _refreshFromCloud() {
+  if (!_currentUser || _offlineMode) return;
+  if (!_cloudLoaded) { _loadFromCloud(_currentUser.uid); return; } // retry a failed first load
+  if (_saveTimer || _saveInFlight || _loadInFlight) return;       // local changes pending: keep them
+  _loadFromCloud(_currentUser.uid, { refresh: true });
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') _flushSave();
+  else _refreshFromCloud();
+});
+window.addEventListener('pagehide', _flushSave);
+window.addEventListener('online', () => {
+  if (_saveTimer || _retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; _doCloudSave(); }
+  else _refreshFromCloud();
+});
 
 let _manualSyncCooldown = false;
 function manualSync() {
@@ -3691,7 +3739,10 @@ function manualSync() {
   _manualSyncCooldown = true;
   const btn = document.getElementById('sync-btn');
   if (btn) { btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none'; }
-  _doCloudSave();
+  // Unsaved local changes → upload them. Otherwise → download the latest.
+  if (!_cloudLoaded) _loadFromCloud(_currentUser.uid);
+  else if (_saveTimer || _retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; _doCloudSave(); }
+  else _loadFromCloud(_currentUser.uid, { refresh: true, manual: true });
   setTimeout(() => {
     _manualSyncCooldown = false;
     if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
@@ -3708,7 +3759,9 @@ function _sanitize(obj) {
 }
 
 function _doCloudSave() {
-  if (!_currentUser) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = null;
+  if (!_currentUser || _offlineMode || !_cloudLoaded) return Promise.resolve();
   _setSyncBar('↑ Saving…', 'rgba(157,127,245,0.15)');
   const raw = {
     goals, habits, tasks, quotes,
@@ -3729,15 +3782,27 @@ function _doCloudSave() {
     quoteIndex,
   };
   const data = _sanitize(raw);
+  const saveId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  data.saveId = saveId;
   data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-  db.collection('users').doc(_currentUser.uid).set(data)
+  _lastSaveId = saveId;
+  _saveInFlight = true;
+  return db.collection('users').doc(_currentUser.uid).set(data)
     .then(() => {
+      _saveInFlight = false;
       _setSyncBar('✓ Synced', 'rgba(45,212,191,0.12)');
       setTimeout(() => _setSyncBar(null), 2000);
     })
     .catch(err => {
-      _setSyncBar('⚠ Save failed: ' + err.code, 'rgba(240,90,90,0.15)');
+      _saveInFlight = false;
+      _setSyncBar('⚠ Save failed: ' + err.code + ' — retrying', 'rgba(240,90,90,0.15)');
       console.error('Save error:', err);
+      // Retry in 10s unless a newer save has been queued meanwhile
+      clearTimeout(_retryTimer);
+      _retryTimer = setTimeout(() => {
+        _retryTimer = null;
+        if (!_saveTimer) _doCloudSave();
+      }, 10000);
     });
 }
 
@@ -3747,12 +3812,28 @@ function _serializeCheckinState() {
 }
 
 // ── Load from Firestore ────────────────────────────────────
-function _loadFromCloud(uid) {
-  _setSyncBar('↓ Loading…', 'rgba(157,127,245,0.15)');
-  db.collection('users').doc(uid).get()
+function _loadFromCloud(uid, opts = {}) {
+  const refresh = !!opts.refresh;
+  if (_loadInFlight) return;
+  _loadInFlight = true;
+  _editedDuringLoad = false;
+  if (!refresh || opts.manual) _setSyncBar('↓ Loading…', 'rgba(157,127,245,0.15)');
+  db.collection('users').doc(uid).get({ source: 'server' })
     .then(doc => {
+      _loadInFlight = false;
+      if (_currentUser?.uid !== uid) return; // signed out / switched account meanwhile
+      if (refresh) {
+        // Keep local state if the user edited during the fetch or a save is pending
+        if (_editedDuringLoad || _saveTimer || _saveInFlight) { _setSyncBar(null); return; }
+        // Nothing new from another device
+        if (!doc.exists || (doc.data().saveId && doc.data().saveId === _lastSaveId)) {
+          if (opts.manual) { _setSyncBar('✓ Up to date', 'rgba(45,212,191,0.12)'); setTimeout(() => _setSyncBar(null), 2000); }
+          return;
+        }
+      }
       if (doc.exists) {
         const d = doc.data();
+        _lastSaveId = d.saveId || null;
         goals            = d.goals            ?? [];
         habits           = d.habits           ?? [];
         tasks            = d.tasks            ?? [];
@@ -3778,8 +3859,7 @@ function _loadFromCloud(uid) {
             if (valid) energyFactors = d.energyFactors;
           }
         }
-        energyFactors    = d.energyFactors    ?? energyFactors;
-        checkinState     = d.checkinState     ?? checkinState;
+        checkinState    = d.checkinState     ?? checkinState;
         // Ensure factors are always plain arrays after Firestore load
         for (const slot of ['morning','afternoon','evening']) {
           if (checkinState[slot] && !Array.isArray(checkinState[slot].factors)) {
@@ -3820,6 +3900,7 @@ function _loadFromCloud(uid) {
           if (chev) chev.style.transform = 'rotate(-90deg)';
         }
         // Check if stored energy is from today — reset if it's a new day
+        _cloudLoaded = true; // set before anything below can trigger a save
         _checkEnergyReset(d.energyDate || '');
         _rebuildAll();
         // Check yesterday popup after cloud data is loaded
@@ -3828,14 +3909,22 @@ function _loadFromCloud(uid) {
         setTimeout(() => _setSyncBar(null), 2000);
       } else {
         // First time — no cloud data yet, save local data up
+        // (doc.exists was confirmed false by the server, so this really is a new account)
+        _cloudLoaded = true;
         _setSyncBar('✓ New account — saving local data', 'rgba(45,212,191,0.12)');
         setTimeout(() => { _setSyncBar(null); _doCloudSave(); }, 1500);
       }
     })
     .catch(err => {
-      _setSyncBar('⚠ Load failed: ' + err.code, 'rgba(240,90,90,0.15)');
-      setTimeout(() => _setSyncBar(null), 5000);
+      _loadInFlight = false;
       console.error('Load error:', err);
+      if (refresh && !opts.manual) return; // quiet background refresh; try again next time
+      // Saving stays blocked until a load succeeds, so empty data can't overwrite the cloud
+      const msg = _cloudLoaded
+        ? '⚠ Couldn\'t check for updates: ' + err.code
+        : '⚠ Load failed: ' + err.code + ' — changes won\'t sync. Tap ⟳ to retry';
+      _setSyncBar(msg, 'rgba(240,90,90,0.15)');
+      if (_cloudLoaded) setTimeout(() => _setSyncBar(null), 5000);
     });
 }
 
@@ -3872,7 +3961,10 @@ const _origSaveTask   = typeof saveTask   !== 'undefined' ? saveTask   : null;
 
 // Listen to all data-mutating functions via a MutationObserver proxy approach
 // Simpler: patch each save/toggle/delete to also call cloudSave()
+let _syncPatched = false;
 function _patchForSync() {
+  if (_syncPatched) return; // only wrap once, even after sign-out / sign-in
+  _syncPatched = true;
   const fns = ['saveGoal','saveHabit','saveTask','toggleHabit','toggleTask',
                'deleteItem','toggleStar','togglePin','addToDaily','saveCheckin',
                'addFactor','removeFactor','addQuoteManual','deleteQuote',
